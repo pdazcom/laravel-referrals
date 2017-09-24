@@ -1,0 +1,37 @@
+{
+    "name": "pdazcom/laravel-referrals",
+    "description": "A referrals system for a laravel projects.",
+    "type": "library",
+    "version": "0.0.1-dev",
+    "require": {
+        "php": "^7.0",
+        "laravel/framework": "^5.3.0"
+    },
+    "require-dev": {
+        "vlucas/phpdotenv": "^2.4",
+        "orchestra/testbench": "^3.4"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Konstantin A."
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Referrals\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Referrals\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Referrals\\Providers\\ReferralsServiceProvider"
+            ]
+        }
+    }
+}
