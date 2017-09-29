@@ -15,7 +15,7 @@ class ReferralCase {
     public function __construct($programName, $user, $rewardObject)
     {
         $this->user = $user;
-        $this->programName = $programName;
+        $this->programName = is_array($programName) ? $programName : [ $programName ];
         $this->rewardObject = $rewardObject;
     }
 

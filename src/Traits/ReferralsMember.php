@@ -15,7 +15,7 @@ trait ReferralsMember {
     {
         return ReferralProgram::all()->map(function ($program) {
             return ReferralLink::getReferral($this, $program);
-        });
+        })->filter();
     }
 
     public function referralProgram()

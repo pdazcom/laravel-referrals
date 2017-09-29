@@ -27,10 +27,10 @@ class ReferralLink extends Model
 
     public static function getReferral($user, $program)
     {
-        return static::firstOrCreate([
+        return static::where([
             'user_id' => $user->id,
             'referral_program_id' => $program->id
-        ]);
+        ])->first();
     }
 
     public function getLinkAttribute()

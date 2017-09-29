@@ -2,9 +2,9 @@
 
 namespace Pdazcom\Referrals\Providers;
 
-use Illuminate\Support\ServiceProvider;
+use Illuminate\Foundation\Support\Providers\EventServiceProvider;
 
-class ReferralsServiceProvider extends ServiceProvider
+class ReferralsServiceProvider extends EventServiceProvider
 {
 
     protected $listen = [
@@ -29,6 +29,8 @@ class ReferralsServiceProvider extends ServiceProvider
      */
     public function boot()
     {
+        parent::boot();
+
         // resolve config
         $this->publishes([__DIR__ . '/../../config/referrals.php' => config_path('referrals.php')], 'config');
 

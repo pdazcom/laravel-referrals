@@ -9,6 +9,7 @@ class ReferUser {
 
     public function handle(UserReferred $event)
     {
+        \Log::debug('ReferUser listener: UserReferred fired!');
         $referralLink = ReferralLink::find($event->referralId);
 
         if (empty($referralLink)) {

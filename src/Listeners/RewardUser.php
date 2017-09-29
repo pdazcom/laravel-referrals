@@ -10,31 +10,33 @@ class RewardUser {
     public function handle(ReferralCase $event)
     {
         // find needle referral program
-        $referralProgram = ReferralProgram::whereName($event->programName)->first();
+        $referralPrograms = ReferralProgram::whereIn('name', $event->programName)->get();
 
         // if it not exists, then nothing to do
-        if (empty($referralProgram)) {
-            \Log::debug("Program named '{$event->programName}' not found");
+        if (empty($referralPrograms)) {
+            \Log::debug("Program named '" . implode(", ", $event->programName) . "' not found");
             return;
         }
 
-        $referralLink = $this->getReferralLink($referralProgram, $event->user->id);
+        foreach ($referralPrograms as $referralProgram) {
+            $referralLink = $this->getReferralLink($referralProgram, $event->user->id);
 
-        // if user is not refer for this referral program then nothing to do
-        if (empty($referralLink)) {
-            return;
+            // if user is not refer for this referral program then nothing to do
+            if (empty($referralLink)) {
+                continue;
+            }
+
+            $recruitUser = $referralLink->user;
+            $referralUser = $event->user;
+            $rewardClass = config('referrals.programs.' . $referralProgram->name);
+
+            if (!class_exists($rewardClass)) {
+                \Log::debug("Not configured program reward class for '{$referralProgram->name}' referral program");
+                continue;
+            }
+
+            (new $rewardClass($referralProgram, $recruitUser, $referralUser))->reward($event->rewardObject);
         }
-
-        $recruitUser = $referralLink->user;
-        $referralUser = $event->user;
-        $rewardClass = config('referrals.programs.' . $referralProgram->name);
-
-        if (!class_exists($rewardClass)) {
-            \Log::debug("Not configured program reward class for '{$referralProgram->name}' referral program");
-            return;
-        }
-
-        (new $rewardClass($referralProgram, $recruitUser, $referralUser))->reward($event->rewardObject);
     }
 
     /**
