@@ -13,6 +13,7 @@ class ReferUser {
         $referralLink = ReferralLink::find($event->referralId);
 
         if (empty($referralLink)) {
+            \Log::warn('Referral Link not found for referralId '. $event->referralId);
             return;
         }
 
