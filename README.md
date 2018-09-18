@@ -60,20 +60,11 @@ Then in `Http/Controllers/Auth/RegisterController.php` add event dispatcher:
 use Pdazcom\Referrals\Events\UserReferred;
 
 ...
-// overwrite register function
-public function register(Request $request)
+// overwrite registered function
+public function registered(Request $request)
 {
-    $this->validator($request->all())->validate();
-
-    event(new Registered($user = $this->create($request->all())));
-    
     // dispatch user referred event here
     event(new UserReferred(request()->cookie('ref'), $user));
-
-    $this->guard()->login($user);
-
-    return $this->registered($request, $user)
-        ?: redirect($this->redirectPath());
 }
 ```
 
@@ -84,7 +75,7 @@ And then you need to create a referral program in DB and attach it to users by `
 ```
     php artisan tinker
     
-    Pdazcom\Referrals\Models\ReferralProgram::create(['name'=>'example', 'uri' => 'register']);
+    Pdazcom\Referrals\Models\ReferralProgram::create(['name'=>'example', 'title' => 'Example Program', 'description' => 'Laravel Referrals made easy thanks to laravel-referrals package based on an article by Damir Miladinov,', 'uri' => 'register']);
 ```
 
 add association to config `referrals.programs`:
@@ -123,7 +114,7 @@ create referral link:
 ```
 php artisan tinker
 
-Pdazcom\Referrals\ReferralLink::create(['user_id' => 1, 'referral_program_id' => 1]);
+Pdazcom\Referrals\Models\ReferralLink::create(['user_id' => 1, 'referral_program_id' => 1]);
 ```
 
 and finally dispatch reward event in any place of your code:
