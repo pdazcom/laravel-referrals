@@ -15,6 +15,9 @@ class ReferralLink extends Model
 
     protected static function boot()
     {
+        // Required to call super method first - https://github.com/laravel/framework/issues/25455
+        parent::boot();
+
         static::creating(function (ReferralLink $model) {
             $model->generateCode();
         });
