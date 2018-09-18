@@ -18,7 +18,7 @@ class StoreReferralCode {
             /** @var ReferralLink $referral */
             $referral = ReferralLink::whereCode($request->get('ref'))->first();
             /** @var ReferralProgram $program */
-            $program = $referral->program();
+            $program = $referral->program()->first();
             if (!empty($referral)) {
                 return redirect($request->url())->cookie('ref', $referral->id, $program->lifetime_minutes);
             } else {
