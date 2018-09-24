@@ -127,6 +127,14 @@ From this point all referrals action you need would be reward recruit users by c
 
 Create many programs and their reward classes. Enjoy!
 
+### Bonus Content 
+
+If you want to list all the users for a given Referral Link, simply use
+
+```php
+$referralLink->referredUsers()
+```
+
 ## Security
 
 If you discover any security related issues, please email kostya.dn@gmail.com instead of using the issue tracker.
