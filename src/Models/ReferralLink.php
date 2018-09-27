@@ -60,7 +60,9 @@ class ReferralLink extends Model
     public function referredUsers()
     {
         $usersModel = config('auth.providers.users.model');
-        return $this->hasManyThrough($usersModel, ReferralRelationship::class, 'user_id', 'id', 'id', 'referral_link_id');
+        $list = $this->relationships->map(function($m){
+            return $m->user_id;
+        });
+        return $usersModel::whereIn('id', $list)->get();
     }
-
 }
