@@ -14,7 +14,7 @@ class RewardUser {
 
         // if it not exists, then nothing to do
         if (empty($referralPrograms)) {
-            \Log::debug("Program named '" . implode(", ", $event->programName) . "' not found");
+            \Log::warn("Program named '" . implode(", ", $event->programName) . "' not found");
             return;
         }
 
@@ -31,7 +31,7 @@ class RewardUser {
             $rewardClass = config('referrals.programs.' . $referralProgram->name);
 
             if (!class_exists($rewardClass)) {
-                \Log::debug("Not configured program reward class for '{$referralProgram->name}' referral program");
+                \Log::warn("Not configured program reward class for '{$referralProgram->name}' referral program");
                 continue;
             }
 

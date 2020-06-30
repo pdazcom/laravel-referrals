@@ -15,6 +15,9 @@ class ReferralLink extends Model
 
     protected static function boot()
     {
+        // Required to call super method first - https://github.com/laravel/framework/issues/25455
+        parent::boot();
+
         static::creating(function (ReferralLink $model) {
             $model->generateCode();
         });
@@ -54,4 +57,12 @@ class ReferralLink extends Model
         return $this->hasMany(ReferralRelationship::class);
     }
 
+    public function referredUsers()
+    {
+        $usersModel = config('auth.providers.users.model');
+        $list = $this->relationships->map(function($m){
+            return $m->user_id;
+        });
+        return $usersModel::whereIn('id', $list)->get();
+    }
 }

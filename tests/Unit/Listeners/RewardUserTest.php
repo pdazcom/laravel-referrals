@@ -4,26 +4,24 @@ namespace Pdazcom\Referrals\Tests\Unit;
 
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
-use Orchestra\Testbench\Traits\WithLoadMigrationsFrom;
 use Pdazcom\Referrals\Events\ReferralCase;
-use Pdazcom\Referrals\Events\UserReferred;
-use Pdazcom\Referrals\Listeners\ReferUser;
 use Pdazcom\Referrals\Listeners\RewardUser;
 use Pdazcom\Referrals\Models\ReferralProgram;
 use Pdazcom\Referrals\Programs\ExampleProgram;
+use Pdazcom\Referrals\Tests\WithLoadMigrations;
 use Pdazcom\Referrals\Tests\TestCase;
 use Mockery as m;
 
 class RewardUserTest extends TestCase
 {
-    use WithLoadMigrationsFrom;
     use DatabaseTransactions;
     use DatabaseMigrations;
+    use WithLoadMigrations;
 
     public function setUp()
     {
         parent::setUp();
-        $this->loadMigrationsFrom(__DIR__ . '/../../../database/migrations');
+        $this->loadMigrations();
     }
 
     public function testRewardUser()

@@ -4,23 +4,23 @@ namespace Pdazcom\Referrals\Tests\Unit;
 
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
-use Orchestra\Testbench\Traits\WithLoadMigrationsFrom;
 use Pdazcom\Referrals\Events\UserReferred;
 use Pdazcom\Referrals\Listeners\ReferUser;
 use Pdazcom\Referrals\Models\ReferralProgram;
 use Pdazcom\Referrals\Tests\TestCase;
 use Mockery as m;
+use Pdazcom\Referrals\Tests\WithLoadMigrations;
 
 class ReferUserTest extends TestCase
 {
-    use WithLoadMigrationsFrom;
     use DatabaseTransactions;
     use DatabaseMigrations;
+    use WithLoadMigrations;
 
     public function setUp()
     {
         parent::setUp();
-        $this->loadMigrationsFrom(__DIR__ . '/../../../database/migrations');
+        $this->loadMigrations();
     }
 
     public function testCreatingRelationship()
