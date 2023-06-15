@@ -4,6 +4,7 @@ namespace Pdazcom\Referrals\Http\Middleware;
 
 use Illuminate\Http\Request;
 use Pdazcom\Referrals\Models\ReferralLink;
+use Pdazcom\Referrals\Models\ReferralProgram;
 
 /**
  * Class StoreReferralCode
@@ -14,10 +15,14 @@ class StoreReferralCode {
     public function handle(Request $request, \Closure $next)
     {
         if ($request->has('ref')){
+            /** @var ReferralLink $referral */
             $referral = ReferralLink::whereCode($request->get('ref'))->first();
-
+            /** @var ReferralProgram $program */
+            $program = $referral->program()->first();
             if (!empty($referral)) {
-                return redirect($request->url())->cookie('ref', $referral->id, $referral->lifetime_minutes);
+                return redirect($request->url())->cookie('ref', $referral->id, $program->lifetime_minutes);
+            } else {
+                \Log::warn('Referral Ref code not found where request.ref equals '.$request->has('ref'));
             }
         }
 
