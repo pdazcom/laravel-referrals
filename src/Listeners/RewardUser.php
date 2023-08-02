@@ -2,19 +2,26 @@
 
 namespace Pdazcom\Referrals\Listeners;
 
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Log;
 use Pdazcom\Referrals\Events\ReferralCase;
 use Pdazcom\Referrals\Models\ReferralProgram;
 
+/**
+ * Reward accrual
+ */
 class RewardUser {
 
-    public function handle(ReferralCase $event)
+    public function handle(ReferralCase $event): void
     {
         // find needle referral program
         $referralPrograms = ReferralProgram::whereIn('name', $event->programName)->get();
 
         // if it not exists, then nothing to do
         if (empty($referralPrograms)) {
-            \Log::warn("Program named '" . implode(", ", $event->programName) . "' not found");
+            Log::warning("Program(s) named '" . implode(", ", $event->programName) . "' not found");
             return;
         }
 
@@ -31,7 +38,7 @@ class RewardUser {
             $rewardClass = config('referrals.programs.' . $referralProgram->name);
 
             if (!class_exists($rewardClass)) {
-                \Log::warn("Not configured program reward class for '{$referralProgram->name}' referral program");
+                Log::warning("Not configured program reward class for '$referralProgram->name' referral program");
                 continue;
             }
 
@@ -44,9 +51,9 @@ class RewardUser {
      *
      * @param $userId
      * @param ReferralProgram $program
-     * @return mixed
+     * @return Builder|Model|HasMany|null
      */
-    protected function getReferralLink($program, $userId)
+    protected function getReferralLink(ReferralProgram $program, $userId): Builder|Model|HasMany|null
     {
         return $program->links()->whereHas('relationships', function ($query) use ($userId) {
             $query->where('user_id', $userId);

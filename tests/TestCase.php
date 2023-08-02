@@ -2,23 +2,18 @@
 
 namespace Pdazcom\Referrals\Tests;
 
+use Illuminate\Foundation\Application;
 use Orchestra\Testbench\TestCase as OrchestraTestCase;
 
 class TestCase extends OrchestraTestCase
 {
-    protected function setUp()
-    {
-        parent::setUp();
-        \DB::connection()->enableQueryLog();
-    }
-
     /**
      * Define environment setup.
      *
-     * @param  \Illuminate\Foundation\Application  $app
+     * @param  Application  $app
      * @return void
      */
-    protected function getEnvironmentSetUp($app)
+    protected function getEnvironmentSetUp($app): void
     {
         // Setup default database to use sqlite :memory:
         $app['config']->set('database.default', 'testbench');
@@ -29,7 +24,7 @@ class TestCase extends OrchestraTestCase
         ]);
     }
 
-    protected function getPackageProviders($app)
+    protected function getPackageProviders($app): array
     {
         return ['Pdazcom\Referrals\Providers\ReferralsServiceProvider'];
     }

@@ -1,9 +1,7 @@
 <?php
 
-namespace Pdazcom\Referrals\Tests\Unit;
+namespace Pdazcom\Referrals\Tests\Unit\Listeners;
 
-use Illuminate\Foundation\Testing\DatabaseMigrations;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Pdazcom\Referrals\Events\ReferralCase;
 use Pdazcom\Referrals\Listeners\RewardUser;
 use Pdazcom\Referrals\Models\ReferralProgram;
@@ -14,24 +12,14 @@ use Mockery as m;
 
 class RewardUserTest extends TestCase
 {
-    use DatabaseTransactions;
-    use DatabaseMigrations;
     use WithLoadMigrations;
-
-    public function setUp()
-    {
-        parent::setUp();
-        $this->loadMigrations();
-    }
 
     public function testRewardUser()
     {
-        $recruitUser = m::mock(\stdClass::class);
-        $recruitUser->id = 1;
+        $recruitUser = m::mock($this->user());
         $recruitUser->balance = 100;
 
-        $referralUser = m::mock(\stdClass::class);
-        $referralUser->id = 2;
+        $referralUser = $this->user();
 
         $program = ReferralProgram::create([
             'name' => 'example',
@@ -52,8 +40,9 @@ class RewardUserTest extends TestCase
         $event = new ReferralCase('example', $referralUser, 350);
 
         $recruitUser->shouldReceive('save')->once();
-        $mockRewardUser = m::mock(RewardUser::class)->makePartial()->shouldAllowMockingProtectedMethods();
+        $mockRewardUser = m::mock(RewardUser::class)->makePartial();
 
+        $mockRewardUser->shouldAllowMockingProtectedMethods();
         $mockRewardUser->shouldReceive('getReferralLink')->once()->andReturn($refLink);
         $mockRewardUser->handle($event);
 

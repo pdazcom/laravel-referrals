@@ -1,35 +1,24 @@
 <?php
 namespace Pdazcom\Referrals\Tests\Unit\Models;
 
-use Illuminate\Foundation\Auth\User;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Pdazcom\Referrals\Models\ReferralLink;
 use Pdazcom\Referrals\Models\ReferralProgram;
 use Pdazcom\Referrals\Tests\TestCase;
 use Pdazcom\Referrals\Tests\WithLoadMigrations;
 
 class ReferralLinkTest extends TestCase
 {
-    use DatabaseTransactions;
-    use DatabaseMigrations;
     use WithLoadMigrations;
-
-    public function setUp()
-    {
-        parent::setup();
-        $this->loadMigrations();
-        $this->app['config']->set('auth.providers.users.model', User::class);
-    }
 
     public function testReferredUsers()
     {
-        $referralUser = User::create();
+        $referralUser = $this->user();
 
-        $recruitUser1 = User::create();
+        $recruitUser1 = $this->user();
 
-        User::create();
+        $this->user();
 
-        $recruitUser2 = User::create();
+        $recruitUser2 = $this->user();
 
 
         $program = ReferralProgram::create([
@@ -39,7 +28,7 @@ class ReferralLinkTest extends TestCase
             'uri' => 'test',
         ]);
 
-        /** @var \Pdazcom\Referrals\Models\ReferralLink $refLink */
+        /** @var ReferralLink $refLink */
         $refLink = $program->links()->create([
             'user_id' => $referralUser->id,
         ]);

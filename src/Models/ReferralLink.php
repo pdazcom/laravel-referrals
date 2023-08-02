@@ -2,12 +2,19 @@
 
 namespace Pdazcom\Referrals\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 use Ramsey\Uuid\Uuid;
 
 /**
  * Class ReferralLink
  * @package Pdazcom\Referrals\Models
+ * @property string $code
+ * @property Collection $relationships
+ * @property ReferralProgram $program
  */
 class ReferralLink extends Model
 {
@@ -36,23 +43,23 @@ class ReferralLink extends Model
         ])->first();
     }
 
-    public function getLinkAttribute()
+    public function link(): Attribute
     {
-        return url($this->program->uri) . '?ref=' . $this->code;
+        return Attribute::get( fn () => url($this->program->uri) . '?ref=' . $this->code);
     }
 
-    public function user()
+    public function user(): BelongsTo
     {
         $usersModel = config('auth.providers.users.model');
         return $this->belongsTo($usersModel);
     }
 
-    public function program()
+    public function program(): BelongsTo
     {
         return $this->belongsTo(ReferralProgram::class, 'referral_program_id');
     }
 
-    public function relationships()
+    public function relationships(): HasMany
     {
         return $this->hasMany(ReferralRelationship::class);
     }
@@ -60,9 +67,6 @@ class ReferralLink extends Model
     public function referredUsers()
     {
         $usersModel = config('auth.providers.users.model');
-        $list = $this->relationships->map(function($m){
-            return $m->user_id;
-        });
-        return $usersModel::whereIn('id', $list)->get();
+        return $usersModel::whereIn('id', $this->relationships->pluck('user_id')->all())->get();
     }
 }
