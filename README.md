@@ -30,9 +30,17 @@ Then in config/app.php add service-provider and facade alias:
 
 First of all you need to run:
 ```
-php artisan vendor:publish --provider='Pdazcom\Referrals\Providers\ReferralsServiceProvider' 
+php artisan vendor:publish --tag=referrals-config
 ```
-Then change new migrations if it need and run `php artisan migrate`
+to make `referrals.php` file in your `config` folder.
+
+>**OPTIONAL:** If you want to make changes to the migration files, you also need to run:
+>```
+>php artisan vendor:publish --tag=referrals-migrations
+>```
+> Then change new migrations.
+
+Run `php artisan migrate` to make tables in database.
 
 Add middleware to your `web` group in `Http/Kernel.php`:
 
@@ -41,10 +49,9 @@ Add middleware to your `web` group in `Http/Kernel.php`:
     ...
     \Pdazcom\Referrals\Http\Middleware\StoreReferralCode::class,
 ],
-
 ```
 
-Add `Pdazcom\Referrals\Traits\ReferralsMember` to your `Users` model:
+Add `Pdazcom\Referrals\Traits\ReferralsMember` trait to your `Users` model:
 
 ```
     class User extends Authenticatable {
@@ -64,13 +71,13 @@ use Pdazcom\Referrals\Events\UserReferred;
 public function registered(Request $request)
 {
     // dispatch user referred event here
-    event(new UserReferred(request()->cookie('ref'), $user));
+    UserReferred::dispatch(request()->cookie('ref'), $user);
 }
 ```
 
-From this point all referral links would be attach new users as referrals to users owners of this links.
+From this point all referral links would be attached new users as referrals to users owners of these links.
 
-And then you need to create a referral program in DB and attach it to users by `referral_program_id` field:
+And then you need to create a referral program in database and attach it to users by `referral_program_id` field:
 
 ```
     php artisan tinker
@@ -83,7 +90,7 @@ add association to config `referrals.programs`:
     ...
     'example' => App\ReferralPrograms\ExampleProgram.php
 ```
-and create an reward class `App\ReferralPrograms\ExampleProgram.php` for referral program:
+and create the reward class `App\ReferralPrograms\ExampleProgram.php` for referral program:
 
 ```
 <?php
@@ -109,7 +116,6 @@ class ExampleProgram extends AbstractProgram {
 
 }
 ```
-
 create referral link:
 ```
 php artisan tinker
@@ -120,7 +126,10 @@ Pdazcom\Referrals\Models\ReferralLink::create(['user_id' => 1, 'referral_program
 and finally dispatch reward event in any place of your code:
 
 ```
-event(Pdazcom\Referrals\Events\ReferralCase(['example'], $referralUser, $rewardObject))
+use Pdazcom\Referrals\Events\ReferralCase;
+...
+
+ReferralCase::dispatch('example', $referralUser, $rewardObject);
 ```
 
 From this point all referrals action you need would be reward recruit users by code logic in your reward classes.
