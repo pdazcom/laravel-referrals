@@ -2,23 +2,23 @@
 
 namespace Pdazcom\Referrals\Events;
 
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
+/**
+ * Event that attach referrals
+ */
 class UserReferred
 {
-    use SerializesModels;
+    use SerializesModels, Dispatchable;
 
-    public $referralId;
-    public $user;
+    public string|int $referralId;
+    public Model $user;
 
-    public function __construct($referralId, $user)
+    public function __construct($referralId, Model $user)
     {
         $this->referralId = $referralId;
         $this->user = $user;
-    }
-
-    public function broadcastOn()
-    {
-        return [];
     }
 }

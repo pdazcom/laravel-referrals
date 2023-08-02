@@ -10,21 +10,21 @@ abstract class AbstractProgram implements ProgramInterface {
     /**
      * @var ReferralProgram
      */
-    protected $program;
+    protected ReferralProgram $program;
 
     /**
      * User who attracted the referral.
      *
      * @var mixed
      */
-    protected $recruitUser;
+    protected mixed $recruitUser;
 
     /**
      * Attracted user
      *
-     * @var
+     * @var mixed
      */
-    protected $referralUser;
+    protected mixed $referralUser;
 
     public function __construct(ReferralProgram $program, $recruitUser, $referralUser)
     {
