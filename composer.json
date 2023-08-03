@@ -2,6 +2,17 @@
     "name": "pdazcom/laravel-referrals",
     "description": "A referrals system for a laravel projects.",
     "homepage": "https://github.com/pdazcom/laravel-referrals",
+    "keywords": [
+        "laravel",
+        "referrals",
+        "package",
+        "laravel-referrals",
+        "referral-system",
+        "user-referral",
+        "affiliate",
+        "referral-program",
+        "referals"
+    ],
     "type": "library",
     "version": "1.0.0",
     "require": {
