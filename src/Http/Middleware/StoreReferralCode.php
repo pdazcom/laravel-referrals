@@ -18,19 +18,23 @@ class StoreReferralCode {
 
     public function handle(Request $request, Closure $next)
     {
-        if ($request->has('ref')){
+        $cookie = config('referrals.cookie_name', 'ref');
 
+        if ($request->has($cookie)) {
             /** @var ReferralLink $referral */
-            $referral = ReferralLink::whereCode($request->get('ref'))->first();
-
-            /** @var ReferralProgram $program */
-            $program = $referral->program()->first();
+            $referral = ReferralLink::whereCode($request->get($cookie))->first();
 
             if (!empty($referral)) {
-                return redirect($request->url())->cookie('ref', $referral->id, $program->lifetime_minutes);
-            } else {
-                Log::warning('Referral Ref code not found where request.ref equals ' . $request->get('ref'));
+
+                $referral->addClick();
+
+                /** @var ReferralProgram $program */
+                $program = $referral->program()->first();
+
+                return redirect($request->url())->cookie($cookie, $referral->id, $program->lifetime_minutes);
             }
+
+            Log::warning('Referral Ref code not found where request.ref equals ' . $request->get($cookie));
         }
 
         return $next($request);

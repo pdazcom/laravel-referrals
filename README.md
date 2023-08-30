@@ -9,7 +9,12 @@ A simple system of referrals with the ability to assign different programs for d
 This package was created based on the [lesson](https://blog.damirmiladinov.com/laravel/building-laravel-referral-system.html#.Wc4eA6xJaHo) 
 author is Damir Miladinov, with some minor changes, for which I express my gratitude to him.
 
+- [Installation](#installation)
+- [Usage](#usage)
+- [Bonus](#bonus-content )
+
 ## Installation
+### Add dependency
 Via Composer
 
 ``` bash
@@ -26,14 +31,14 @@ Then in config/app.php add service-provider and facade alias:
 ];
 ```
 
-## Usage
-
+### Configuration
 First of all you need to run:
 ```
 php artisan vendor:publish --tag=referrals-config
 ```
 to make `referrals.php` file in your `config` folder.
 
+### Migrations
 >**OPTIONAL:** If you want to make changes to the migration files, you also need to run:
 >```
 >php artisan vendor:publish --tag=referrals-migrations
@@ -42,6 +47,7 @@ to make `referrals.php` file in your `config` folder.
 
 Run `php artisan migrate` to make tables in database.
 
+### Middleware
 Add middleware to your `web` group in `Http/Kernel.php`:
 
 ```
@@ -59,7 +65,8 @@ Add `Pdazcom\Referrals\Traits\ReferralsMember` trait to your `Users` model:
         ...
     }
 ```
-
+## Usage
+### Add new referrer event
 Then in `Http/Controllers/Auth/RegisterController.php` add event dispatcher:
 
 ```
@@ -76,7 +83,7 @@ public function registered(Request $request)
 ```
 
 From this point all referral links would be attached new users as referrals to users owners of these links.
-
+### Create referral program
 And then you need to create a referral program in database and attach it to users by `referral_program_id` field:
 
 ```
