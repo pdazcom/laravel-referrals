@@ -12,6 +12,7 @@ use Ramsey\Uuid\Uuid;
 /**
  * Class ReferralLink
  * @package Pdazcom\Referrals\Models
+ * @property int $id
  * @property string $code
  * @property Collection $relationships
  * @property ReferralProgram $program
@@ -68,5 +69,11 @@ class ReferralLink extends Model
     {
         $usersModel = config('auth.providers.users.model');
         return $usersModel::whereIn('id', $this->relationships->pluck('user_id')->all())->get();
+    }
+
+    public function addClick()
+    {
+        $this->increment('clicks');
+        return $this;
     }
 }
