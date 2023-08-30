@@ -3,7 +3,7 @@
     "description": "A referrals system for a laravel projects.",
     "homepage": "https://github.com/pdazcom/laravel-referrals",
     "type": "library",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "require": {
         "laravel/framework": "^9|^10"
     },
