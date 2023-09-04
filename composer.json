@@ -14,7 +14,7 @@
         "referals"
     ],
     "type": "library",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "require": {
         "laravel/framework": "^9|^10"
     },
