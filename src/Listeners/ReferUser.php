@@ -14,18 +14,22 @@ class ReferUser {
     public function handle(UserReferred $event): void
     {
         Log::debug('ReferUser listener: UserReferred fired!');
-        if (empty($event->referralId)) {
-            Log::debug('ReferralId not provided so skipping logic'. $event->referralId);
+        if (empty($event->referralIDs)) {
+            Log::debug('ReferralIDs not provided so skipping logic [' . implode(", ", $event->referralIDs) . ']');
             return;
         }
 
-        $referralLink = ReferralLink::find($event->referralId);
+        foreach ($event->referralIDs as $referralID) {
 
-        if (empty($referralLink)) {
-            Log::warning('Referral Link not found for referralId '. $event->referralId);
-            return;
+            /** @var ReferralLink $referralLink */
+            $referralLink = ReferralLink::find($referralID);
+
+            if (empty($referralLink)) {
+                Log::warning('Referral Link not found for referralId '. $referralID);
+                continue;
+            }
+
+            $referralLink->relationships()->firstOrCreate(['user_id' => $event->user->id]);
         }
-
-        $referralLink->relationships()->create(['user_id' => $event->user->id]);
     }
 }

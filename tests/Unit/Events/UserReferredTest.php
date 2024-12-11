@@ -10,10 +10,15 @@ class UserReferredTest extends TestCase
 {
     public function testCreate()
     {
+        $link_id = fake()->randomNumber();
         $user = new TestUser();
-        $event = new UserReferred(1, $user);
+        $event = new UserReferred([
+            1 => now()->addDay()->timestamp,
+            2 => now()->addMinute()->timestamp,
+            $link_id => now()->timestamp
+        ], $user);
 
-        $this->assertEquals(1, $event->referralId);
+        $this->assertTrue(in_array($link_id, $event->referralIDs));
         $this->assertEquals($user, $event->user);
     }
 }

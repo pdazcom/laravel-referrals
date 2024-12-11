@@ -47,7 +47,7 @@ class ReferralsServiceProvider extends EventServiceProvider
         ], 'referrals-migrations');
 
         AboutCommand::add('Laravel Referrals', fn () => [
-            'Version' => '1.0.0',
+            'Version' => '2.0.0',
             'Description' => 'A simple system of referrals with the ability to assign different programs for different users.',
             'Url' => 'https://github.com/pdazcom/laravel-referrals'
         ]);

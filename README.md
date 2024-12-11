@@ -11,7 +11,7 @@ author is Damir Miladinov, with some minor changes, for which I express my grati
 
 - [Installation](#installation)
 - [Usage](#usage)
-- [Bonus](#bonus-content )
+- [Bonus](#bonus-content)
 
 ## Installation
 ### Add dependency
@@ -56,8 +56,28 @@ Add middleware to your `web` group in `Http/Kernel.php`:
     \Pdazcom\Referrals\Http\Middleware\StoreReferralCode::class,
 ],
 ```
+This intermediary stores referral links applied to the user in cookies. 
+
+
+>#### Примечание
+>Starting from v2.0, several referral programs can be applied to same user.
+>They will be stored in cookies as a JSON-object, and in the request instance, 
+>an array will be available in the `_referrals` property:
+>```
+>[  
+>   'ref_id_1' => 'expires_timestamp',
+>   'ref_id_2' => 'expires_timestamp',
+>   ...
+>   'ref_id_n' => 'expires_timestamp'
+>]
+>```
+>where `ref_id_n` - ID of referral link, `expires_timestamp` - storage expire timestamp for links in cookies.
+> 
+> Expired links are automatically deleted.
+> 
 
 Add `Pdazcom\Referrals\Traits\ReferralsMember` trait to your `Users` model:
+
 
 ```
     class User extends Authenticatable {
@@ -72,13 +92,14 @@ Then in `Http/Controllers/Auth/RegisterController.php` add event dispatcher:
 ```
 ...
 use Pdazcom\Referrals\Events\UserReferred;
+use Pdazcom\Referrals\Middlewares\StoreReferralCode;
 
 ...
 // overwrite registered function
 public function registered(Request $request)
 {
     // dispatch user referred event here
-    UserReferred::dispatch(request()->cookie('ref'), $user);
+    UserReferred::dispatch(request()->input(StoreReferralCode::REFERRALS), $user);
 }
 ```
 
@@ -143,7 +164,7 @@ From this point all referrals action you need would be reward recruit users by c
 
 Create many programs and their reward classes. Enjoy!
 
-### Bonus Content 
+### Bonus Content
 
 If you want to list all the users for a given Referral Link, simply use
 
@@ -177,4 +198,4 @@ The MIT License (MIT). Please see [License File](LICENSE) for more information.
 [link-code-quality]: https://scrutinizer-ci.com/g/pdazcom/laravel-referrals
 [link-downloads]: https://packagist.org/packages/pdazcom/laravel-referrals
 [link-author]: https://github.com/pdazcom
-[link-contributors]: ../../contributors
+[link-contributors]: https://github.com/pdazcom/laravel-referrals/graphs/contributors

@@ -9,7 +9,7 @@ trait WithLoadMigrations
 {
     use RefreshDatabase;
 
-    protected function beforeRefreshingDatabase()
+    protected function beforeRefreshingDatabase(): void
     {
         $this->app['config']->set('auth.providers.users.model', User::class);
     }
@@ -23,12 +23,10 @@ trait WithLoadMigrations
     }
 
     protected function user(array $attributes = []): User {
-        return User::create([
-            ...[
-                'name' => fake()->userName,
-                'email' => fake()->email,
-                'password' => Hash::make(fake()->password),
-            ],
-            ...$attributes]);
+        return User::create(array_merge([
+            'name' => fake()->userName,
+            'email' => fake()->email,
+            'password' => Hash::make(fake()->password),
+        ], $attributes));
     }
 }
