@@ -59,7 +59,7 @@ Add middleware to your `web` group in `Http/Kernel.php`:
 This intermediary stores referral links applied to the user in cookies. 
 
 
->#### Примечание
+>#### Note
 >Starting from v2.0, several referral programs can be applied to same user.
 >They will be stored in cookies as a JSON-object, and in the request instance, 
 >an array will be available in the `_referrals` property:
