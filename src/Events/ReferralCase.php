@@ -15,7 +15,7 @@ class ReferralCase {
 
     public array $programName;
     public Model $user;
-    public $rewardObject;
+    public mixed $rewardObject;
 
     public function __construct($programName, Model $user, $rewardObject)
     {

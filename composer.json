@@ -14,12 +14,14 @@
         "referals"
     ],
     "type": "library",
-    "version": "1.1.1",
+    "version": "2.0.0",
     "require": {
-        "laravel/framework": "^9|^10"
+        "php": "^8.2",
+        "laravel/framework": "^9.52.18|^10",
+        "ext-json": "*"
     },
     "require-dev": {
-        "orchestra/testbench":"^7.25"
+        "orchestra/testbench":"^7.48"
     },
     "license": "MIT",
     "authors": [

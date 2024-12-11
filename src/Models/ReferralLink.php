@@ -21,7 +21,7 @@ class ReferralLink extends Model
 {
     protected $fillable = ['user_id', 'referral_program_id'];
 
-    protected static function boot()
+    protected static function boot(): void
     {
         // Required to call super method first - https://github.com/laravel/framework/issues/25455
         parent::boot();
@@ -31,7 +31,7 @@ class ReferralLink extends Model
         });
     }
 
-    private function generateCode()
+    private function generateCode(): void
     {
         $this->code = (string) Uuid::uuid1();
     }
@@ -71,7 +71,7 @@ class ReferralLink extends Model
         return $usersModel::whereIn('id', $this->relationships->pluck('user_id')->all())->get();
     }
 
-    public function addClick()
+    public function addClick(): static
     {
         $this->increment('clicks');
         return $this;

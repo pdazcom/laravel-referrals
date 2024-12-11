@@ -13,12 +13,12 @@ class UserReferred
 {
     use SerializesModels, Dispatchable;
 
-    public string|int $referralId;
+    public array $referralIDs;
     public Model $user;
 
-    public function __construct($referralId, Model $user)
+    public function __construct(array $referralId, Model $user)
     {
-        $this->referralId = $referralId;
+        $this->referralIDs = array_keys($referralId);
         $this->user = $user;
     }
 }
