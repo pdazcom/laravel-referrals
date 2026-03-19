@@ -18,7 +18,7 @@ class AddAllowedRefProgramToUsers extends Migration
         }
 
         Schema::table($this->getUsersTable(), function (Blueprint $table) {
-            $table->integer('referral_program_id')->unsigned()->nullable()->dafault(null);
+            $table->integer('referral_program_id')->unsigned()->nullable()->default(null);
 
             $table->foreign('referral_program_id')
                 ->references('id')
