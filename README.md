@@ -21,15 +21,7 @@ Via Composer
 $ composer require pdazcom/laravel-referrals
 ```
 
-Then in config/app.php add service-provider and facade alias:
-
-```
-'providers' => [
-    ...
-    Pdazcom\Referrals\Providers\ReferralsServiceProvider::class,
-    ...
-];
-```
+The service provider is registered automatically via Laravel package discovery.
 
 ### Configuration
 First of all you need to run:
@@ -92,14 +84,14 @@ Then in `Http/Controllers/Auth/RegisterController.php` add event dispatcher:
 ```
 ...
 use Pdazcom\Referrals\Events\UserReferred;
-use Pdazcom\Referrals\Middlewares\StoreReferralCode;
+use Pdazcom\Referrals\Http\Middleware\StoreReferralCode;
 
 ...
 // overwrite registered function
-public function registered(Request $request)
+public function registered(Request $request, $user)
 {
     // dispatch user referred event here
-    UserReferred::dispatch(request()->input(StoreReferralCode::REFERRALS), $user);
+    UserReferred::dispatch($request->input(StoreReferralCode::REFERRALS), $user);
 }
 ```
 
@@ -116,7 +108,7 @@ And then you need to create a referral program in database and attach it to user
 add association to config `referrals.programs`:
 ```
     ...
-    'example' => App\ReferralPrograms\ExampleProgram.php
+    'example' => \App\ReferralPrograms\ExampleProgram::class,
 ```
 and create the reward class `App\ReferralPrograms\ExampleProgram.php` for referral program:
 
