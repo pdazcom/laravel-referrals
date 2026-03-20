@@ -16,69 +16,102 @@ author is Damir Miladinov, with some minor changes, for which I express my grati
 - [Bonus](#bonus-content)
 
 ## Installation
-### Add dependency
-Via Composer
+These steps are verified against a fresh Laravel 11 and Laravel 12 application.
 
-``` bash
-$ composer require pdazcom/laravel-referrals
+### 1. Install the package
+
+```bash
+composer require pdazcom/laravel-referrals
 ```
 
-The service provider is registered automatically via Laravel package discovery.
+Laravel registers the service provider automatically through package discovery.
 
-### Configuration
-First of all you need to run:
-```
+### 2. Publish the config file
+
+```bash
 php artisan vendor:publish --tag=referrals-config
 ```
-to make `referrals.php` file in your `config` folder.
 
-### Migrations
->**OPTIONAL:** If you want to make changes to the migration files, you also need to run:
->```
->php artisan vendor:publish --tag=referrals-migrations
->```
-> Then change new migrations.
+This creates `config/referrals.php`, where you register your referral program classes.
 
-Run `php artisan migrate` to make tables in database.
+If you prefer the package command, you can run:
 
-### Middleware
-Add middleware to your `web` group in `Http/Kernel.php`:
-
+```bash
+php artisan referrals:install --config
 ```
-'web' => [
-    ...
-    \Pdazcom\Referrals\Http\Middleware\StoreReferralCode::class,
-],
+
+### 3. Run the migrations
+
+```bash
+php artisan migrate
 ```
-This intermediary stores referral links applied to the user in cookies. 
 
+The package loads its migrations automatically for the default setup, so you do not need to publish them unless you want to customize the migration files before running them.
 
->#### Note
->Starting from v2.0, several referral programs can be applied to same user.
->They will be stored in cookies as a JSON-object, and in the request instance, 
->an array will be available in the `_referrals` property:
->```
->[  
->   'ref_id_1' => 'expires_timestamp',
->   'ref_id_2' => 'expires_timestamp',
->   ...
->   'ref_id_n' => 'expires_timestamp'
->]
->```
->where `ref_id_n` - ID of referral link, `expires_timestamp` - storage expire timestamp for links in cookies.
-> 
-> Expired links are automatically deleted.
-> 
+If you need to customize the migrations, publish them first:
 
-Add `Pdazcom\Referrals\Traits\ReferralsMember` trait to your `Users` model:
-
-
+```bash
+php artisan vendor:publish --tag=referrals-migrations
 ```
-    class User extends Authenticatable {
-        use ReferralsMember;
-        ...
-    }
+
+Or use the package command:
+
+```bash
+php artisan referrals:install --migrations
 ```
+
+### 4. Register the middleware
+
+In Laravel 11 and 12, append the middleware to the `web` stack in `bootstrap/app.php`:
+
+```php
+use Illuminate\Foundation\Configuration\Middleware;
+
+->withMiddleware(function (Middleware $middleware): void {
+    $middleware->web(append: [
+        \Pdazcom\Referrals\Http\Middleware\StoreReferralCode::class,
+    ]);
+})
+```
+
+This middleware stores referral links in cookies so they can be attached when the user signs up.
+
+### 5. Add the trait to your user model
+
+Add `Pdazcom\Referrals\Traits\ReferralsMember` to `app/Models/User.php`:
+
+```php
+use Pdazcom\Referrals\Traits\ReferralsMember;
+
+class User extends Authenticatable
+{
+    use HasFactory, Notifiable, ReferralsMember;
+}
+```
+
+### Upgrade notes for older docs
+
+- If you are upgrading from older README instructions, do not edit `app/Http/Kernel.php` in Laravel 11 or 12. Middleware registration moved to `bootstrap/app.php`.
+- You only need to publish the package migrations if you want to edit them before running `php artisan migrate`.
+
+> #### Note
+> Starting from v2.0, several referral programs can be applied to the same user.
+> They are stored in cookies as a JSON object, and the request instance exposes them
+> in the `_referrals` property:
+>
+> ```
+> [
+>    'ref_id_1' => 'expires_timestamp',
+>    'ref_id_2' => 'expires_timestamp',
+>    ...
+>    'ref_id_n' => 'expires_timestamp'
+> ]
+> ```
+>
+> `ref_id_n` is the referral link ID, and `expires_timestamp` is the cookie
+> expiration timestamp. Expired links are deleted automatically.
+
+Next: continue with the [quickstart](#quickstart) to create your first referral program and verify the reward flow.
 
 ## Quickstart
 
@@ -101,6 +134,8 @@ Checkpoint: `php artisan about` should show a `Laravel Referrals` section.
 In Laravel 11 and 12, append the middleware in `bootstrap/app.php`:
 
 ```php
+use Illuminate\Foundation\Configuration\Middleware;
+
 ->withMiddleware(function (Middleware $middleware): void {
     $middleware->web(append: [
         \Pdazcom\Referrals\Http\Middleware\StoreReferralCode::class,
@@ -179,7 +214,6 @@ tail -n 5 storage/logs/laravel.log
 Checkpoint: the log contains `Quickstart reward triggered`.
 
 At this point the package is installed, the referral relationship is stored, and the reward handler is running. To wire this into your real registration flow, dispatch `UserReferred::dispatch($request->input(StoreReferralCode::REFERRALS), $user)` after signup as shown below.
-
 ## Usage
 ### Add new referrer event
 Then in `Http/Controllers/Auth/RegisterController.php` add event dispatcher:
