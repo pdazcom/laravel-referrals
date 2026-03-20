@@ -165,6 +165,10 @@ If you want to list all the users for a given Referral Link, simply use
 $referralLink->referredUsers()
 ```
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for local setup, how to run tests, and the pull request workflow.
+
 ## Security
 
 If you discover any security related issues, please email kostya.dn@gmail.com instead of using the issue tracker.
