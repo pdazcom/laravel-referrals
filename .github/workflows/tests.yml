@@ -46,9 +46,13 @@ jobs:
           extensions: dom, curl, libxml, mbstring, zip, pdo, sqlite, pdo_sqlite
           coverage: none
 
+      - name: Allow insecure audit resolution for Laravel 9 matrix
+        if: matrix.laravel == '^9.52.18'
+        run: composer config audit.block-insecure false
+
       - name: Install dependencies
         run: |
-          composer require "laravel/framework:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" --no-interaction --no-update
+          composer require "laravel/framework:${{ matrix.laravel }}" --dev "orchestra/testbench:${{ matrix.testbench }}" --no-interaction --no-update
           composer update --prefer-dist --no-interaction
 
       - name: Run tests
