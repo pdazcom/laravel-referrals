@@ -11,6 +11,7 @@ This package was created based on the [lesson](https://blog.damirmiladinov.com/l
 author is Damir Miladinov, with some minor changes, for which I express my gratitude to him.
 
 - [Installation](#installation)
+- [Quickstart](#quickstart)
 - [Usage](#usage)
 - [Bonus](#bonus-content)
 
@@ -78,6 +79,107 @@ Add `Pdazcom\Referrals\Traits\ReferralsMember` trait to your `Users` model:
         ...
     }
 ```
+
+## Quickstart
+
+This quickstart gives you a verified path from install to the first successful referral relationship and reward dispatch in a fresh Laravel 11 or 12 app.
+
+### 1. Install the package
+
+```bash
+composer require pdazcom/laravel-referrals
+php artisan vendor:publish --tag=referrals-config
+php artisan migrate
+```
+
+You do not need to publish the package migrations for the default setup. The package loads them automatically.
+
+Checkpoint: `php artisan about` should show a `Laravel Referrals` section.
+
+### 2. Register the middleware and trait
+
+In Laravel 11 and 12, append the middleware in `bootstrap/app.php`:
+
+```php
+->withMiddleware(function (Middleware $middleware): void {
+    $middleware->web(append: [
+        \Pdazcom\Referrals\Http\Middleware\StoreReferralCode::class,
+    ]);
+})
+```
+
+Then add the trait to your `app/Models/User.php` model:
+
+```php
+use Pdazcom\Referrals\Traits\ReferralsMember;
+
+class User extends Authenticatable
+{
+    use HasFactory, Notifiable, ReferralsMember;
+}
+```
+
+### 3. Add a reward handler
+
+Create `app/ReferralPrograms/QuickstartProgram.php`:
+
+```php
+<?php
+
+namespace App\ReferralPrograms;
+
+use Illuminate\Support\Facades\Log;
+use Pdazcom\Referrals\Programs\AbstractProgram;
+
+class QuickstartProgram extends AbstractProgram
+{
+    public function reward(mixed $rewardObject): void
+    {
+        Log::info('Quickstart reward triggered', [
+            'program' => $this->program->name,
+            'recruit_user_id' => $this->recruitUser->id,
+            'referral_user_id' => $this->referralUser->id,
+            'reward' => $rewardObject,
+        ]);
+    }
+}
+```
+
+Register it in `config/referrals.php`:
+
+```php
+'programs' => [
+    'quickstart' => \App\ReferralPrograms\QuickstartProgram::class,
+],
+```
+
+### 4. Create a referrer, program, and referral link
+
+```bash
+php artisan tinker --execute='use App\Models\User; use Pdazcom\Referrals\Models\ReferralLink; use Pdazcom\Referrals\Models\ReferralProgram; $referrer = User::firstOrCreate(["email" => "referrer@example.com"], ["name" => "Referrer", "password" => "secret123"]); $program = ReferralProgram::firstOrCreate(["name" => "quickstart"], ["title" => "Quickstart Program", "description" => "Quickstart verification", "uri" => "/register", "lifetime_minutes" => 60]); $link = ReferralLink::firstOrCreate(["user_id" => $referrer->id, "referral_program_id" => $program->id]); echo json_encode(["referrer_id" => $referrer->id, "program_id" => $program->id, "link_id" => $link->id, "code" => $link->code, "url" => $link->link], JSON_PRETTY_PRINT);'
+```
+
+Checkpoint: the output includes a `link_id`, `code`, and `url`.
+
+### 5. Dispatch the referral event for a new user
+
+```bash
+php artisan tinker --execute='use App\Models\User; use Pdazcom\Referrals\Events\UserReferred; use Pdazcom\Referrals\Models\ReferralLink; use Pdazcom\Referrals\Models\ReferralRelationship; $link = ReferralLink::firstOrFail(); $email = "referred+" . now()->timestamp . "@example.com"; $user = User::create(["name" => "Referred User", "email" => $email, "password" => "secret123"]); UserReferred::dispatch([$link->id => now()->addHour()->timestamp], $user); $relationship = ReferralRelationship::where("user_id", $user->id)->first(); echo json_encode(["referred_user_id" => $user->id, "relationship_exists" => (bool) $relationship, "relationship_link_id" => $relationship?->referral_link_id], JSON_PRETTY_PRINT);'
+```
+
+Checkpoint: `relationship_exists` is `true`.
+
+### 6. Dispatch the reward event
+
+```bash
+php artisan tinker --execute='use App\Models\User; use Pdazcom\Referrals\Events\ReferralCase; $user = User::latest("id")->firstOrFail(); ReferralCase::dispatch("quickstart", $user, ["order_total" => 1500]); echo json_encode(["rewarded_user_id" => $user->id], JSON_PRETTY_PRINT);'
+tail -n 5 storage/logs/laravel.log
+```
+
+Checkpoint: the log contains `Quickstart reward triggered`.
+
+At this point the package is installed, the referral relationship is stored, and the reward handler is running. To wire this into your real registration flow, dispatch `UserReferred::dispatch($request->input(StoreReferralCode::REFERRALS), $user)` after signup as shown below.
+
 ## Usage
 ### Add new referrer event
 Then in `Http/Controllers/Auth/RegisterController.php` add event dispatcher:
@@ -129,7 +231,7 @@ class ExampleProgram extends AbstractProgram {
     * 
     *   @param $rewardObject
     */
-    public function reward($rewardObject)
+    public function reward(mixed $rewardObject): void
     {
         $this->recruitUser->balance = $this->recruitUser->balance + $rewardObject * (self::ROYALTY_PERCENT/100);
         $this->recruitUser->save();
