@@ -2,7 +2,6 @@
 
 namespace Pdazcom\Referrals\Http\Middleware;
 
-use Carbon\Carbon;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -90,8 +89,8 @@ class StoreReferralCode {
         // set cookie with max ref program lifetime
         $cookieExpires = max(array_values($programCookie));
 
-        // add a minute for inclusive difference
-        $lifetimeMinutes = Carbon::createFromTimestamp($cookieExpires)->diffInMinutes() + 1;
+        // compute remaining minutes; ceil to avoid expiring one second early
+        $lifetimeMinutes = (int) ceil(($cookieExpires - time()) / 60);
 
         return cookie(
             $this->cookieName,
