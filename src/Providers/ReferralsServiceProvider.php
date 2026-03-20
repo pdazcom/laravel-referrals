@@ -4,16 +4,21 @@ namespace Pdazcom\Referrals\Providers;
 
 use Illuminate\Foundation\Console\AboutCommand;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider;
+use Pdazcom\Referrals\Console\InstallCommand;
+use Pdazcom\Referrals\Events\ReferralCase;
+use Pdazcom\Referrals\Events\UserReferred;
+use Pdazcom\Referrals\Listeners\ReferUser;
+use Pdazcom\Referrals\Listeners\RewardUser;
 
 class ReferralsServiceProvider extends EventServiceProvider
 {
 
     protected $listen = [
-        'Pdazcom\Referrals\Events\UserReferred' => [
-            'Pdazcom\Referrals\Listeners\ReferUser',
+        UserReferred::class => [
+            ReferUser::class,
         ],
-        'Pdazcom\Referrals\Events\ReferralCase' => [
-            'Pdazcom\Referrals\Listeners\RewardUser',
+        ReferralCase::class => [
+            RewardUser::class,
         ],
     ];
 
@@ -22,6 +27,7 @@ class ReferralsServiceProvider extends EventServiceProvider
      */
     public function register()
     {
+        parent::register();
         $this->mergeConfigFrom(__DIR__ . '/../../config/referrals.php', 'referrals');
     }
 
@@ -51,5 +57,9 @@ class ReferralsServiceProvider extends EventServiceProvider
             'Description' => 'A simple system of referrals with the ability to assign different programs for different users.',
             'Url' => 'https://github.com/pdazcom/laravel-referrals'
         ]);
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([InstallCommand::class]);
+        }
     }
 }
