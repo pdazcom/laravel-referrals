@@ -11,6 +11,7 @@ This package was created based on the [lesson](https://blog.damirmiladinov.com/l
 author is Damir Miladinov, with some minor changes, for which I express my gratitude to him.
 
 - [Installation](#installation)
+- [Configuration Reference](#configuration-reference)
 - [Quickstart](#quickstart)
 - [Usage](#usage)
 - [Bonus](#bonus-content)
@@ -112,6 +113,59 @@ class User extends Authenticatable
 > expiration timestamp. Expired links are deleted automatically.
 
 Next: continue with the [quickstart](#quickstart) to create your first referral program and verify the reward flow.
+
+## Configuration Reference
+
+The package configuration file is `config/referrals.php`:
+
+```php
+return [
+    'programs' => [
+        'example' => \Pdazcom\Referrals\Programs\ExampleProgram::class,
+    ],
+    'cookie_name' => 'ref',
+];
+```
+
+### Keys
+
+| Key | Default | Required | Behavior |
+| --- | --- | --- | --- |
+| `programs` | `['example' => \Pdazcom\Referrals\Programs\ExampleProgram::class]` | Yes (for reward execution) | Maps `referral_programs.name` to a reward handler class. `RewardUser` resolves handler classes via `config('referrals.programs.<program_name>')`. Missing mappings are skipped with a warning log. |
+| `cookie_name` | `'ref'` | No | Controls the query parameter read by `StoreReferralCode` and the cookie name used to persist active referral link IDs and expiry timestamps. |
+
+### `programs`
+
+Use `programs` to register each referral program name with the class that should run when `ReferralCase` is dispatched.
+
+- The array key must match the `name` value stored in `referral_programs`.
+- The class should implement package program behavior (typically by extending `Pdazcom\Referrals\Programs\AbstractProgram`).
+- If no mapping exists for a program name, no reward class is executed for that event.
+
+Example (single program):
+
+```php
+'programs' => [
+    'welcome-bonus' => \App\ReferralPrograms\WelcomeBonusProgram::class,
+],
+```
+
+Example (multiple programs):
+
+```php
+'programs' => [
+    'welcome-bonus' => \App\ReferralPrograms\WelcomeBonusProgram::class,
+    'first-purchase' => \App\ReferralPrograms\FirstPurchaseProgram::class,
+],
+```
+
+### `cookie_name`
+
+`cookie_name` defines the referral parameter your links use and the cookie key the middleware writes to.
+
+- With the default value (`ref`), links look like: `/register?ref=ABC123`.
+- If you set `cookie_name` to `referral`, links look like: `/register?referral=ABC123`.
+- Existing links must use the same query parameter name as your configured `cookie_name`.
 
 ## Quickstart
 
