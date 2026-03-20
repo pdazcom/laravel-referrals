@@ -4,6 +4,7 @@ namespace Pdazcom\Referrals\Providers;
 
 use Illuminate\Foundation\Console\AboutCommand;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider;
+use Pdazcom\Referrals\Console\InstallCommand;
 
 class ReferralsServiceProvider extends EventServiceProvider
 {
@@ -51,5 +52,9 @@ class ReferralsServiceProvider extends EventServiceProvider
             'Description' => 'A simple system of referrals with the ability to assign different programs for different users.',
             'Url' => 'https://github.com/pdazcom/laravel-referrals'
         ]);
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([InstallCommand::class]);
+        }
     }
 }
