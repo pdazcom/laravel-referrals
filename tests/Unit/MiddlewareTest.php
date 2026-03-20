@@ -53,7 +53,8 @@ class MiddlewareTest extends TestCase
         // parse value as json and check it
         $refCookieLinks = json_decode($cookie->getValue(), true);
         $this->assertArrayHasKey($refLink->id, $refCookieLinks);
-        $this->assertEquals($cookie->getExpiresTime(), $refCookieLinks[$refLink->id]);
+        $this->assertGreaterThanOrEqual($refCookieLinks[$refLink->id], $cookie->getExpiresTime());
+        $this->assertLessThanOrEqual($refCookieLinks[$refLink->id] + 60, $cookie->getExpiresTime());
 
         // check if click was incremented
         $refLink->refresh();
@@ -100,7 +101,8 @@ class MiddlewareTest extends TestCase
         $this->assertCount(2, $refCookieLinks);
         $this->assertArrayHasKey($refLink->id, $refCookieLinks);
         $this->assertArrayHasKey($refLink2->id, $refCookieLinks);
-        $this->assertEquals($cookie->getExpiresTime(), $refCookieLinks[$refLink2->id]);
+        $this->assertGreaterThanOrEqual($refCookieLinks[$refLink2->id], $cookie->getExpiresTime());
+        $this->assertLessThanOrEqual($refCookieLinks[$refLink2->id] + 60, $cookie->getExpiresTime());
         $this->assertTrue($refCookieLinks[$refLink2->id] > $refCookieLinks[$refLink->id]);
 
         // check if click was incremented

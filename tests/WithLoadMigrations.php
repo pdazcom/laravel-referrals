@@ -16,10 +16,8 @@ trait WithLoadMigrations
 
     protected function defineDatabaseMigrations(): void
     {
-        $this->loadLaravelMigrations();
+        $this->loadMigrationsFrom(\Orchestra\Testbench\default_migration_path());
         $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
-
-
     }
 
     protected function user(array $attributes = []): User {

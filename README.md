@@ -2,6 +2,7 @@
 
 [![Latest Version on Packagist][ico-version]][link-packagist]
 [![Software License][ico-license]](LICENSE)
+[![Tests][ico-tests]][link-tests]
 [![Total Downloads][ico-downloads]][link-downloads]
 
 A simple system of referrals with the ability to assign different programs for different users.
@@ -179,15 +180,11 @@ The MIT License (MIT). Please see [License File](LICENSE) for more information.
 
 [ico-version]: https://img.shields.io/packagist/v/pdazcom/laravel-referrals.svg?style=flat-square
 [ico-license]: https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square
-[ico-travis]: https://img.shields.io/travis/pdazcom/laravel-referrals/master.svg?style=flat-square
-[ico-scrutinizer]: https://img.shields.io/scrutinizer/coverage/g/pdazcom/laravel-referrals.svg?style=flat-square
-[ico-code-quality]: https://img.shields.io/scrutinizer/g/pdazcom/laravel-referrals.svg?style=flat-square
+[ico-tests]: https://img.shields.io/github/actions/workflow/status/pdazcom/laravel-referrals/tests.yml?branch=master&label=tests&style=flat-square
 [ico-downloads]: https://img.shields.io/packagist/dt/pdazcom/laravel-referrals.svg?style=flat-square
 
 [link-packagist]: https://packagist.org/packages/pdazcom/laravel-referrals
-[link-travis]: https://travis-ci.org/pdazcom/laravel-referrals
-[link-scrutinizer]: https://scrutinizer-ci.com/g/pdazcom/laravel-referrals/code-structure
-[link-code-quality]: https://scrutinizer-ci.com/g/pdazcom/laravel-referrals
+[link-tests]: https://github.com/pdazcom/laravel-referrals/actions/workflows/tests.yml
 [link-downloads]: https://packagist.org/packages/pdazcom/laravel-referrals
 [link-author]: https://github.com/pdazcom
 [link-contributors]: https://github.com/pdazcom/laravel-referrals/graphs/contributors

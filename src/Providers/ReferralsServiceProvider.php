@@ -35,7 +35,7 @@ class ReferralsServiceProvider extends EventServiceProvider
         // publish config
         $this->publishes([__DIR__ . '/../../config/referrals.php' => config_path('referrals.php')], 'referrals-config');
 
-        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
+        $this->loadMigrationsFrom(__DIR__.'/../../database/migrations');
 
         // publish migrations
         $migrationsPath = __DIR__ . '/../../database/migrations/2017_09_23_1100';
