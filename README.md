@@ -13,6 +13,7 @@ author is Damir Miladinov, with some minor changes, for which I express my grati
 - [Installation](#installation)
 - [Configuration Reference](#configuration-reference)
 - [Quickstart](#quickstart)
+- [Sharing and Entry Flows](#sharing-and-entry-flows)
 - [Usage](#usage)
 - [Bonus](#bonus-content)
 
@@ -76,6 +77,8 @@ use Illuminate\Foundation\Configuration\Middleware;
 ```
 
 This middleware stores referral links in cookies so they can be attached when the user signs up.
+
+It accepts both legacy UUID links and human-friendly referral codes in the same `?ref=` query parameter. For the recommended sharing patterns, see [Sharing and Entry Flows](#sharing-and-entry-flows).
 
 ### 5. Add the trait to your user model
 
@@ -268,6 +271,84 @@ tail -n 5 storage/logs/laravel.log
 Checkpoint: the log contains `Quickstart reward triggered`.
 
 At this point the package is installed, the referral relationship is stored, and the reward handler is running. To wire this into your real registration flow, dispatch `UserReferred::dispatch($request->input(StoreReferralCode::REFERRALS), $user)` after signup as shown below.
+
+If you want to support code sharing in chat, SMS, or native mobile flows, continue with [Sharing and Entry Flows](#sharing-and-entry-flows).
+
+## Sharing and Entry Flows
+
+Use this section to choose the referral flow that matches your product surface. The package now supports both shareable links and code-only attribution without breaking existing link-based integrations.
+
+For a deeper guide with examples and verification steps, see [docs/sharing-and-entry-flows.md](docs/sharing-and-entry-flows.md).
+
+### Choose the right flow
+
+| Flow | Best for | What you share | What the user does |
+| --- | --- | --- | --- |
+| `referral_link` | Chat, email, SMS, landing pages | Human-friendly link such as `/register?ref=INVITE2024` | Opens the link and signs up normally |
+| `referral_code` | Support flows, native mobile apps, offline campaigns | Short code such as `INVITE2024` | Types or pastes the code into your app |
+| `link` | Backward-compatible integrations | UUID link such as `/register?ref=550e8400-e29b-41d4-a716-446655440000` | Opens the legacy link |
+
+### Share a human-friendly link
+
+Use `referral_link` when you want a readable URL for public sharing:
+
+```php
+$link = ReferralLink::create([
+    'user_id' => $user->id,
+    'referral_program_id' => $program->id,
+]);
+
+$shareUrl = $link->referral_link;
+$shareCode = $link->referral_code;
+```
+
+This is the recommended default for web, email, SMS, and messaging apps because the same code can also be shown separately for manual entry.
+
+### Accept manual code entry
+
+Use `registerWithCode()` when the referred user enters a code directly instead of visiting a link. The method accepts either the human-friendly `referral_code` or the legacy UUID `code`.
+
+```php
+use Illuminate\Http\Request;
+
+public function store(Request $request)
+{
+    $data = $request->validate([
+        'name' => ['required', 'string'],
+        'email' => ['required', 'email'],
+        'password' => ['required', 'string'],
+        'referral_code' => ['nullable', 'string'],
+    ]);
+
+    $user = User::create($data);
+
+    if (!empty($data['referral_code'])) {
+        $user->registerWithCode($data['referral_code']);
+    }
+
+    return redirect('/dashboard');
+}
+```
+
+`registerWithCode()` returns `true` when the code resolves to a referral link and `false` when the code is unknown, so you can decide whether to show validation feedback or continue without attribution.
+
+### Keep legacy links if you already use them
+
+The original `link` attribute still returns a URL with the UUID-based `code`:
+
+```php
+$legacyUrl = $link->link;
+```
+
+This keeps older integrations working. New user-facing sharing surfaces should prefer `referral_link` and `referral_code`.
+
+### Verify attribution
+
+1. Create a referral link and note both `$link->referral_link` and `$link->referral_code`.
+2. Visit the share URL and confirm the middleware redirects to a clean URL and stores the referral cookie.
+3. Complete signup and confirm a `referral_relationships` row exists for the new user.
+4. Repeat the same attribution using `$user->registerWithCode($link->referral_code)` and confirm you get the same relationship result.
+
 ## Usage
 ### Add new referrer event
 Then in `Http/Controllers/Auth/RegisterController.php` add event dispatcher:
