@@ -6,7 +6,8 @@ Laravel Referrals 2.x should support a narrow reporting foundation built on pack
 
 That means 2.x should support:
 
-- metrics that can be derived from `ReferralLink`, `ReferralRelationship`, and `rewarded_at`
+- metrics that can be derived from package-owned records such as `ReferralLink` and `ReferralRelationship`
+- optional downstream milestones only where teams explicitly enable them, such as duplicate-reward protection
 - clear docs describing which package events and records are stable reporting inputs
 - lightweight extension seams so applications can emit their own analytics events at the right moments
 - examples of practical reporting questions users can answer without changing the package into a reporting platform
@@ -17,10 +18,10 @@ That means 2.x should support:
 
 The current package already captures a useful but intentionally small set of referral facts:
 
-- `ReferralLink` identifies the referrer, program, share URL/code, and click count
+- `ReferralLink` identifies the referrer, program, share URL/code, and click count for `StoreReferralCode`-based touchpoints
 - `ReferralRelationship` records that a referred user was attached to a specific link
-- `rewarded_at` records whether the package has already issued a reward for that relationship when duplicate-reward protection is enabled
-- `UserReferred` and `ReferralCase` mark the package lifecycle moments that applications can observe
+- `rewarded_at` can act as an optional downstream milestone only when duplicate-reward protection is enabled
+- `UserReferred` and `ReferralCase` mark the package lifecycle moments that applications can observe directly
 
 This is enough for basic operational reporting such as "how many links exist," "how many relationships were created," "which programs convert," and "how many relationships were rewarded." It is not enough for a full analytics product with time-series event history, multi-touch attribution, campaign ROI, or finance-grade payout reporting.
 
@@ -35,9 +36,9 @@ The best 2.x reporting surface is documentation-first plus application-owned que
 Package users should treat these records as the canonical reporting inputs:
 
 - `referral_programs`: program catalog and reporting dimension
-- `referral_links`: created referral assets, share surfaces, and click totals
+- `referral_links`: created referral assets, share surfaces, and click totals for link-visit flows that pass through package middleware
 - `referral_relationships`: successful attribution outcomes
-- `rewarded_at`: whether the relationship has already produced a package-managed reward outcome
+- optional application-owned reward records if teams need reward completion, payout, or finance reporting
 
 This gives users a practical reporting spine without requiring the package to ship its own reporting UI.
 
@@ -48,9 +49,8 @@ Applications should be able to rely on these moments for their own instrumentati
 - referral touch captured via `StoreReferralCode`
 - relationship creation via `UserReferred` -> `ReferUser`
 - reward trigger attempt via `ReferralCase`
-- reward execution through `RewardUser`
 
-The package does not need to persist every one of these as first-class analytics records in 2.x, but it should document them as the moments where application analytics can subscribe safely.
+The package does not need to persist every one of these as first-class analytics records in 2.x, but it should document them as the moments where application analytics can subscribe safely. If teams need post-reward success analytics, they should emit that from their own reward program implementation or application-level wrapper rather than assume the package emits a reward-completed event today.
 
 ### 3. Queryable examples instead of package dashboards
 
@@ -89,17 +89,18 @@ Why this works:
 
 Supported metrics:
 
-- total clicks by referral link
-- top-performing links by clicks
-- clicks by program
+- total clicks by referral link for web flows captured by `StoreReferralCode`
+- top-performing links by clicks within those same link-visit flows
+- clicks by program for middleware-observed link traffic
 
 Why this works:
 
-- `referral_links.clicks` already exists as a lightweight aggregate
+- `referral_links.clicks` already exists as a lightweight aggregate for package-observed link visits
 
 Important limitation:
 
 - this is aggregate engagement, not event history
+- manual code entry, API attachment flows, and mobile attribution paths do not increment this counter today
 - 2.x should not pretend it can answer session-level or time-series questions from a single counter
 
 ### 3. Successful attribution and conversion
@@ -109,7 +110,7 @@ Supported metrics:
 - number of referral relationships created
 - referred users by link or by program
 - conversion rate from links to relationships
-- conversion rate from clicks to relationships, where teams accept counter-based limitations
+- conversion rate from middleware-observed clicks to relationships, where teams accept flow-specific counter limitations
 
 Why this works:
 
@@ -119,20 +120,21 @@ Important limitation:
 
 - because click tracking is a cumulative counter and not an event log, "click to relationship conversion" is directional reporting, not a warehouse-quality funnel
 
-### 4. Reward completion
+### 4. Optional reward completion milestone
 
 Supported metrics:
 
-- rewarded relationships count
-- reward completion rate by program
-- time from relationship creation to reward completion when `rewarded_at` is used
+- rewarded relationships count when duplicate-reward protection is enabled
+- reward completion rate by program when teams explicitly adopt `rewarded_at` as an application-accepted milestone
+- time from relationship creation to reward completion when `rewarded_at` is enabled and semantically appropriate
 
 Why this works:
 
-- `rewarded_at` gives the package a narrow but useful downstream milestone
+- `rewarded_at` gives the package a narrow but optional downstream milestone in one specific configuration path
 
 Important limitation:
 
+- this field is not populated in the default configuration path
 - this is not a complete reward ledger
 - it cannot answer payout finance questions such as amount paid over time, reversals, liabilities, or settlement status unless the application owns that data
 
@@ -146,9 +148,11 @@ To make the above reporting surface trustworthy, 2.x should preserve these assum
 
 That matters because many reporting questions depend on one stable conversion record rather than on transient cookies, request inputs, or external business events.
 
-### 2. `rewarded_at` remains a simple milestone, not a reward ledger
+### 2. `rewarded_at` remains an optional milestone, not a canonical reward ledger
 
-`rewarded_at` should continue to mean only "a reward for this relationship has already been processed by the package flow."
+When duplicate-reward protection is enabled, `rewarded_at` should continue to mean only "a reward for this relationship has already been processed by the package flow."
+
+It should not be treated as a package-wide reporting fact that always exists across installations.
 
 It should not be overloaded to represent:
 
