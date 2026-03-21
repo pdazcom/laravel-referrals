@@ -27,6 +27,51 @@ class ReferralCodeCollisionTest extends TestCase
         ]);
     }
 
+    public function testRetryOnDbConstraintViolationEventuallySucceeds(): void
+    {
+        $intercepted = false;
+        $firstCode = 'RACE-CODE';
+        $secondCode = 'SAFE-CODE';
+
+        $callCount = 0;
+        $this->app->bind(ReferralCodeGeneratorInterface::class, function () use (&$callCount, $firstCode, $secondCode) {
+            return new class($callCount, $firstCode, $secondCode) implements ReferralCodeGeneratorInterface {
+                public function __construct(
+                    private int &$callCount,
+                    private string $firstCode,
+                    private string $secondCode,
+                ) {}
+
+                public function generate(): string
+                {
+                    $this->callCount++;
+                    return $this->callCount <= 2 ? $this->firstCode : $this->secondCode;
+                }
+            };
+        });
+
+        new ReferralLink();
+
+        ReferralLink::creating(function (ReferralLink $model) use (&$intercepted, $firstCode) {
+            if (!$intercepted && $model->referral_code === $firstCode) {
+                $intercepted = true;
+                \Illuminate\Support\Facades\DB::table('referral_links')->insert([
+                    'user_id' => 99,
+                    'referral_program_id' => $model->referral_program_id,
+                    'code' => (string) \Ramsey\Uuid\Uuid::uuid1(),
+                    'referral_code' => $firstCode,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        });
+
+        $newLink = $this->program->links()->create(['user_id' => 2]);
+
+        $this->assertEquals($secondCode, $newLink->referral_code);
+        $this->assertTrue($intercepted, 'The race-condition simulation must have fired');
+    }
+
     public function testRetryOnCollisionEventuallySucceeds(): void
     {
         $callCount = 0;

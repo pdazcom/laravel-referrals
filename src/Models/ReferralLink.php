@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Collection;
 use Pdazcom\Referrals\Contracts\ReferralCodeGeneratorInterface;
 use Pdazcom\Referrals\Exceptions\ReferralCodeGenerationException;
@@ -37,6 +38,10 @@ class ReferralLink extends Model
 
     private function generateCode(): void
     {
+        if ($this->code !== null) {
+            return;
+        }
+
         $this->code = (string) Uuid::uuid1();
     }
 
@@ -59,6 +64,41 @@ class ReferralLink extends Model
         }
 
         throw ReferralCodeGenerationException::maxAttemptsExceeded($maxAttempts);
+    }
+
+    public function save(array $options = []): bool
+    {
+        if ($this->exists) {
+            return parent::save($options);
+        }
+
+        $maxAttempts = config('referrals.code_generation_max_attempts', 10);
+
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            try {
+                return parent::save($options);
+            } catch (QueryException $e) {
+                if (!$this->isUniqueConstraintViolation($e) || $attempt >= $maxAttempts) {
+                    throw $e;
+                }
+
+                $this->referral_code = null;
+                $this->generateReferralCode();
+            }
+        }
+
+        throw ReferralCodeGenerationException::maxAttemptsExceeded($maxAttempts);
+    }
+
+    private function isUniqueConstraintViolation(QueryException $e): bool
+    {
+        if (class_exists('Illuminate\Database\UniqueConstraintViolationException')
+            && $e instanceof \Illuminate\Database\UniqueConstraintViolationException) {
+            return true;
+        }
+
+        $errorCode = $e->errorInfo[1] ?? null;
+        return $errorCode === 1062 || $errorCode === 2627 || $errorCode === 19;
     }
 
     public function assignReferralCode(string $referralCode): static
