@@ -242,9 +242,24 @@ class ReferralCodeCollisionTest extends TestCase
         $secondLink = $this->program->links()->create(['user_id' => 2]);
 
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage("conflicts with an existing legacy code");
+        $this->expectExceptionMessage("is already in use");
 
         $secondLink->assignReferralCode($legacyCode);
+    }
+
+    public function testAssignReferralCodeRejectsValueMatchingExistingReferralCode(): void
+    {
+        $existingLink = $this->program->links()->create([
+            'user_id' => 1,
+            'referral_code' => 'TAKEN-CODE',
+        ]);
+
+        $secondLink = $this->program->links()->create(['user_id' => 2]);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("is already in use");
+
+        $secondLink->assignReferralCode('TAKEN-CODE');
     }
 
     public function testAssignReferralCodeAllowsValueNotMatchingAnyColumn(): void

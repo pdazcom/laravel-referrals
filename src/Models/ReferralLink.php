@@ -103,9 +103,9 @@ class ReferralLink extends Model
 
     public function assignReferralCode(string $referralCode): static
     {
-        if (static::where('code', $referralCode)->exists()) {
+        if (static::codeExistsInAnyColumn($referralCode)) {
             throw new \InvalidArgumentException(
-                "The referral code '{$referralCode}' conflicts with an existing legacy code."
+                "The referral code '{$referralCode}' is already in use."
             );
         }
 

@@ -82,7 +82,8 @@ class ReferralCodeTest extends TestCase
 
         $link2 = $this->program->links()->create(['user_id' => $user2->id]);
 
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("is already in use");
         $link2->assignReferralCode('UNIQUE-CODE');
     }
 
