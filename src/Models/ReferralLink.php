@@ -50,6 +50,11 @@ class ReferralLink extends Model
     private function generateReferralCode(): void
     {
         if ($this->referral_code !== null) {
+            if ($this->codeExistsInAnyColumn($this->referral_code)) {
+                throw new \InvalidArgumentException(
+                    "The referral code '{$this->referral_code}' is already in use."
+                );
+            }
             $this->referralCodeManuallySet = true;
             return;
         }

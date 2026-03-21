@@ -270,4 +270,56 @@ class ReferralCodeCollisionTest extends TestCase
 
         $this->assertEquals('SAFE-ASSIGN', $link->fresh()->referral_code);
     }
+
+    public function testManualCreateThrowsWhenReferralCodeAlreadyTaken(): void
+    {
+        $this->program->links()->create([
+            'user_id' => 1,
+            'referral_code' => 'TAKEN-CODE',
+        ]);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("is already in use");
+
+        $this->program->links()->create([
+            'user_id' => 2,
+            'referral_code' => 'TAKEN-CODE',
+        ]);
+    }
+
+    public function testManualCreateThrowsWhenReferralCodeCollidesWithLegacyCode(): void
+    {
+        $existingLink = $this->program->links()->create(['user_id' => 1]);
+        $legacyCode = $existingLink->code;
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("is already in use");
+
+        $this->program->links()->create([
+            'user_id' => 2,
+            'referral_code' => $legacyCode,
+        ]);
+    }
+
+    public function testManualCreateDoesNotPersistRecordWhenCodeCollides(): void
+    {
+        $this->program->links()->create([
+            'user_id' => 1,
+            'referral_code' => 'TAKEN-CODE',
+        ]);
+
+        $countBefore = ReferralLink::count();
+
+        try {
+            $this->program->links()->create([
+                'user_id' => 2,
+                'referral_code' => 'TAKEN-CODE',
+            ]);
+        } catch (\InvalidArgumentException $e) {
+            $this->assertEquals($countBefore, ReferralLink::count(), 'No record should be persisted after collision throw');
+            return;
+        }
+
+        $this->fail('Expected InvalidArgumentException was not thrown.');
+    }
 }
