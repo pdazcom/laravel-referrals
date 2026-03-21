@@ -14,6 +14,7 @@ author is Damir Miladinov, with some minor changes, for which I express my grati
 - [Configuration Reference](#configuration-reference)
 - [Quickstart](#quickstart)
 - [Sharing and Entry Flows](#sharing-and-entry-flows)
+- [Reward Hooks](#reward-hooks)
 - [Usage](#usage)
 - [Bonus](#bonus-content)
 
@@ -127,6 +128,16 @@ return [
         'example' => \Pdazcom\Referrals\Programs\ExampleProgram::class,
     ],
     'cookie_name' => 'ref',
+    'hooks' => [
+        'signup' => false,
+        'first_purchase' => [
+            'enabled'         => false,
+            'event'           => null,
+            'programs'        => [],
+            'user_accessor'   => 'user',
+            'reward_accessor' => null,
+        ],
+    ],
 ];
 ```
 
@@ -136,6 +147,8 @@ return [
 | --- | --- | --- | --- |
 | `programs` | `['example' => \Pdazcom\Referrals\Programs\ExampleProgram::class]` | Yes (for reward execution) | Maps `referral_programs.name` to a reward handler class. `RewardUser` resolves handler classes via `config('referrals.programs.<program_name>')`. Missing mappings are skipped with a warning log. |
 | `cookie_name` | `'ref'` | No | Controls the query parameter read by `StoreReferralCode` and the cookie name used to persist active referral link IDs and expiry timestamps. |
+| `hooks.signup` | `false` | No | When `true`, automatically dispatches `UserReferred` on `Illuminate\Auth\Events\Registered`. Requires `StoreReferralCode` on the registration route. |
+| `hooks.first_purchase` | (see above) | No | When `enabled` is `true` and `event` is set, automatically dispatches `ReferralCase` when the configured event fires. See [Reward Hooks](#reward-hooks) for full options. |
 
 ### `programs`
 
@@ -348,6 +361,78 @@ This keeps older integrations working. New user-facing sharing surfaces should p
 2. Visit the share URL and confirm the middleware redirects to a clean URL and stores the referral cookie.
 3. Complete signup and confirm a `referral_relationships` row exists for the new user.
 4. Repeat the same attribution using `$user->registerWithCode($link->referral_code)` and confirm you get the same relationship result.
+
+## Reward Hooks
+
+Reward hooks let you trigger referral events automatically in response to standard application events, without adding manual event dispatch to every controller or service. All hooks are **opt-in** and disabled by default.
+
+### Signup hook
+
+The signup hook listens to `Illuminate\Auth\Events\Registered` and automatically dispatches `UserReferred` for any referral link stored in the current request by the `StoreReferralCode` middleware.
+
+**Requirements:**
+- `StoreReferralCode` must be active on your registration route.
+- Your registration flow must fire `Illuminate\Auth\Events\Registered` (Laravel's built-in `RegisteredController` and Fortify/Breeze do this automatically).
+
+Enable in `config/referrals.php`:
+
+```php
+'hooks' => [
+    'signup' => true,
+],
+```
+
+When enabled, you no longer need to manually dispatch `UserReferred` in your registration controller. The hook handles it automatically as long as the referral cookie is present on the request.
+
+### First-purchase hook
+
+The first-purchase hook listens to a **configurable application event** and dispatches `ReferralCase` for the configured programs. This is useful when you want to reward the referrer when a referred user makes their first purchase.
+
+Enable and configure in `config/referrals.php`:
+
+```php
+'hooks' => [
+    'first_purchase' => [
+        'enabled'         => true,
+        'event'           => \App\Events\OrderCreated::class,
+        'programs'        => ['welcome-bonus', 'first-purchase'],
+        'user_accessor'   => 'user',
+        'reward_accessor' => 'order',
+    ],
+],
+```
+
+**Options:**
+
+| Key | Default | Description |
+| --- | --- | --- |
+| `enabled` | `false` | Set to `true` to activate the hook. |
+| `event` | `null` | Fully-qualified class name of the event to listen for. Must be set when `enabled` is `true`. |
+| `programs` | `[]` | Array of referral program names to reward. Must match `name` values in `referral_programs` table. |
+| `user_accessor` | `'user'` | Property or zero-argument method name on the event that returns the referred Eloquent user model. |
+| `reward_accessor` | `null` | Property or zero-argument method name on the event to use as the `$rewardObject` passed to `ReferralCase`. When `null`, the event object itself is passed. |
+
+**Example event:**
+
+```php
+namespace App\Events;
+
+class OrderCreated
+{
+    public function __construct(
+        public \App\Models\User $user,
+        public \App\Models\Order $order,
+    ) {}
+}
+```
+
+With the config above, `ReferralCase::dispatch(['welcome-bonus', 'first-purchase'], $event->user, $event->order)` is dispatched automatically whenever `OrderCreated` fires.
+
+> **Note:** The hook dispatches `ReferralCase` every time the configured event fires. If you want to reward only on the first purchase, add a guard inside your program's `reward()` method (for example, check whether a reward has already been recorded for this user).
+
+### Backward compatibility
+
+Enabling hooks does not change any existing behavior. Existing manual dispatches of `UserReferred` and `ReferralCase` continue to work. You can keep manual dispatches alongside hooks without double-rewarding as long as you are not dispatching the same event twice for the same user action.
 
 ## Usage
 ### Add new referrer event

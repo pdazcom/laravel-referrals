@@ -2,6 +2,7 @@
 
 namespace Pdazcom\Referrals\Providers;
 
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Foundation\Console\AboutCommand;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider;
 use Pdazcom\Referrals\Console\InstallCommand;
@@ -9,6 +10,8 @@ use Pdazcom\Referrals\Contracts\ReferralCodeGeneratorInterface;
 use Pdazcom\Referrals\Events\ReferralCase;
 use Pdazcom\Referrals\Events\UserReferred;
 use Pdazcom\Referrals\Generators\RandomStringCodeGenerator;
+use Pdazcom\Referrals\Listeners\OnFirstPurchaseListener;
+use Pdazcom\Referrals\Listeners\OnRegisterListener;
 use Pdazcom\Referrals\Listeners\ReferUser;
 use Pdazcom\Referrals\Listeners\RewardUser;
 
@@ -51,6 +54,8 @@ class ReferralsServiceProvider extends EventServiceProvider
     {
         parent::boot();
 
+        $this->registerHooks();
+
         // publish config
         $this->publishes([__DIR__ . '/../../config/referrals.php' => config_path('referrals.php')], 'referrals-config');
 
@@ -73,6 +78,21 @@ class ReferralsServiceProvider extends EventServiceProvider
 
         if ($this->app->runningInConsole()) {
             $this->commands([InstallCommand::class]);
+        }
+    }
+
+    private function registerHooks(): void
+    {
+        if (config('referrals.hooks.signup', false)) {
+            $this->app['events']->listen(Registered::class, OnRegisterListener::class);
+        }
+
+        $firstPurchaseConfig = config('referrals.hooks.first_purchase', []);
+        $firstPurchaseEnabled = $firstPurchaseConfig['enabled'] ?? false;
+        $firstPurchaseEvent = $firstPurchaseConfig['event'] ?? null;
+
+        if ($firstPurchaseEnabled && $firstPurchaseEvent !== null) {
+            $this->app['events']->listen($firstPurchaseEvent, OnFirstPurchaseListener::class);
         }
     }
 }
