@@ -114,6 +114,45 @@ class MiddlewareTest extends TestCase
         $this->assertEquals($refCookieLinks, $request->get("_referrals"));
     }
 
+    public function testSetCookieWithHumanFriendlyReferralCode()
+    {
+        /** @var ReferralProgram $program */
+        $program = ReferralProgram::create([
+            'name' => 'human_code_test',
+            'title' => 'Human Code Test',
+            'description' => 'Test description',
+            'uri' => 'test-human',
+        ]);
+
+        $refLink = $program->links()->create([
+            'user_id' => 1,
+            'referral_code' => 'WELCOME50',
+        ]);
+
+        $this->assertEquals(0, $refLink->clicks);
+
+        $request = Request::create($program->uri, parameters: [
+            'ref' => 'WELCOME50',
+        ]);
+
+        $middleware = new StoreReferralCode();
+        $response = $middleware->handle($request, function ($request) {
+            return response('');
+        });
+
+        // should redirect and set cookie just like UUID code
+        $this->assertEquals(302, $response->getStatusCode());
+        $this->assertCount(1, $response->headers->getCookies());
+
+        $cookie = $response->headers->getCookies()[0];
+        $refCookieLinks = json_decode($cookie->getValue(), true);
+        $this->assertArrayHasKey($refLink->id, $refCookieLinks);
+
+        // click should be incremented
+        $refLink->refresh();
+        $this->assertEquals(1, $refLink->clicks);
+    }
+
     public function testUnknownReferralCode()
     {
         $program = ReferralProgram::create([

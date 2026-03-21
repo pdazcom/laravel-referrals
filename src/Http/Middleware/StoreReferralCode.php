@@ -34,8 +34,10 @@ class StoreReferralCode {
         $request->merge([static::REFERRALS => $this->parseRefCookie()]);
 
         if ($request->query($this->cookieName)) {
+            $codeValue = $request->get($this->cookieName);
             /** @var ReferralLink $referral */
-            $referral = ReferralLink::whereCode($request->get($this->cookieName))->first();
+            $referral = ReferralLink::whereCode($codeValue)->first()
+                ?? ReferralLink::findByReferralCode($codeValue);
 
             if (!empty($referral)) {
 
