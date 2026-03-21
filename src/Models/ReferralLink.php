@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 use Pdazcom\Referrals\Contracts\ReferralCodeGeneratorInterface;
+use Pdazcom\Referrals\Exceptions\ReferralCodeGenerationException;
 use Ramsey\Uuid\Uuid;
 
 /**
@@ -46,7 +47,18 @@ class ReferralLink extends Model
         }
 
         $generator = app(ReferralCodeGeneratorInterface::class);
-        $this->referral_code = $generator->generate();
+        $maxAttempts = config('referrals.code_generation_max_attempts', 10);
+
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            $candidate = $generator->generate();
+
+            if (!static::where('referral_code', $candidate)->exists()) {
+                $this->referral_code = $candidate;
+                return;
+            }
+        }
+
+        throw ReferralCodeGenerationException::maxAttemptsExceeded($maxAttempts);
     }
 
     public function assignReferralCode(string $referralCode): static
