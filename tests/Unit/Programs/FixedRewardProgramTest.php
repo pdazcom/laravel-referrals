@@ -55,6 +55,38 @@ class FixedRewardProgramTest extends TestCase
         );
     }
 
+    public function testSubclassConstantOverrideTakesPrecedenceOverConfig(): void
+    {
+        $this->app['config']->set('referrals.fixed_reward_amount', 15);
+        $this->app['config']->set('referrals.programs.subclass-bonus', SubclassFixedRewardProgram::class);
+
+        $recruitUser = m::mock($this->user());
+        $recruitUser->balance = 0;
+        $recruitUser->shouldReceive('save')->once();
+
+        $referralUser = $this->user();
+
+        $program = ReferralProgram::create([
+            'name'        => 'subclass-bonus',
+            'title'       => 'Subclass Bonus',
+            'description' => 'Test',
+            'uri'         => 'test',
+        ]);
+
+        $refLink = $program->links()->create(['user_id' => $recruitUser->id]);
+        $refLink->relationships()->create(['user_id' => $referralUser->id]);
+        $refLink->setRelation('user', $recruitUser);
+
+        $mockRewardUser = m::mock(RewardUser::class)->makePartial();
+        $mockRewardUser->shouldAllowMockingProtectedMethods();
+        $mockRewardUser->shouldReceive('getReferralLink')->once()->andReturn($refLink);
+
+        $event = new ReferralCase('subclass-bonus', $referralUser, 999);
+        $mockRewardUser->handle($event);
+
+        $this->assertEquals(50, $recruitUser->balance);
+    }
+
     public function testRewardObjectValueIsIgnored(): void
     {
         $this->app['config']->set('referrals.fixed_reward_amount', 20);
@@ -101,4 +133,9 @@ class FixedRewardProgramTest extends TestCase
         $this->assertEquals(20, $recruitUser1->balance);
         $this->assertEquals(20, $recruitUser2->balance);
     }
+}
+
+class SubclassFixedRewardProgram extends FixedRewardProgram
+{
+    const FIXED_AMOUNT = 50;
 }

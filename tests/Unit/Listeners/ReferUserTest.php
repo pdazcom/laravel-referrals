@@ -151,4 +151,30 @@ class ReferUserTest extends TestCase
         $this->assertEquals(1, $refLink->relationships()->count());
         $this->assertEquals($referrerUser->id, $refLink->relationships()->first()->user_id);
     }
+
+    public function testSelfReferralIsBlockedWhenUserIdIsStoredAsString(): void
+    {
+        $this->app['config']->set('referrals.prevent_self_referral', true);
+
+        $user = $this->user();
+
+        $program = ReferralProgram::create([
+            'name' => 'test',
+            'title' => 'Test',
+            'description' => 'Test description',
+            'uri' => 'test',
+        ]);
+
+        $refLink = $program->links()->create([
+            'user_id' => $user->id,
+        ]);
+
+        $userWithStringId = clone $user;
+        $userWithStringId->id = (string) $user->id;
+
+        $event = new UserReferred([$refLink->id => now()->timestamp], $userWithStringId);
+        (new ReferUser())->handle($event);
+
+        $this->assertEquals(0, $refLink->relationships()->count());
+    }
 }

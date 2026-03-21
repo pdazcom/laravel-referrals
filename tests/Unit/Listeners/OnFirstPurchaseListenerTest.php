@@ -121,4 +121,60 @@ class OnFirstPurchaseListenerTest extends TestCase
             return $event->programName === $programs;
         });
     }
+
+    public function testResolvesUserViaMethodNameWithoutParentheses(): void
+    {
+        Event::fake([ReferralCase::class]);
+
+        $user = new TestUser(['name' => 'Eve', 'email' => 'eve@example.com']);
+        $user->id = 5;
+
+        $purchaseEvent = new class ($user) {
+            public function __construct(private TestUser $userModel) {}
+
+            public function getUser(): TestUser
+            {
+                return $this->userModel;
+            }
+        };
+
+        $this->app['config']->set('referrals.hooks.first_purchase.programs', ['welcome-bonus']);
+        $this->app['config']->set('referrals.hooks.first_purchase.user_accessor', 'getUser');
+        $this->app['config']->set('referrals.hooks.first_purchase.reward_accessor', null);
+
+        $listener = new OnFirstPurchaseListener();
+        $listener->handle($purchaseEvent);
+
+        Event::assertDispatched(ReferralCase::class, function (ReferralCase $event) use ($user) {
+            return $event->user === $user;
+        });
+    }
+
+    public function testResolvesUserViaMethodNameWithParentheses(): void
+    {
+        Event::fake([ReferralCase::class]);
+
+        $user = new TestUser(['name' => 'Frank', 'email' => 'frank@example.com']);
+        $user->id = 6;
+
+        $purchaseEvent = new class ($user) {
+            public function __construct(private TestUser $userModel) {}
+
+            public function getUser(): TestUser
+            {
+                return $this->userModel;
+            }
+        };
+
+        $this->app['config']->set('referrals.hooks.first_purchase.programs', ['welcome-bonus']);
+        $this->app['config']->set('referrals.hooks.first_purchase.user_accessor', 'getUser()');
+        $this->app['config']->set('referrals.hooks.first_purchase.reward_accessor', null);
+
+        $listener = new OnFirstPurchaseListener();
+        $listener->handle($purchaseEvent);
+
+        Event::assertDispatched(ReferralCase::class, function (ReferralCase $event) use ($user) {
+            return $event->user === $user;
+        });
+    }
 }

@@ -44,6 +44,6 @@ class ReferUser {
             return false;
         }
 
-        return $referralLink->user_id === $userId;
+        return (int) $referralLink->user_id === $userId;
     }
 }

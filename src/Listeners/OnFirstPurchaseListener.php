@@ -33,19 +33,20 @@ class OnFirstPurchaseListener
 
     private function resolveUser(object $event, string $accessor): mixed
     {
-        if (str_contains($accessor, '(')) {
-            $method = rtrim($accessor, '()');
-            return method_exists($event, $method) ? $event->$method() : null;
-        }
-
-        return $event->$accessor ?? null;
+        return $this->resolveAccessor($event, $accessor);
     }
 
     private function resolveValue(object $event, string $accessor): mixed
     {
-        if (str_contains($accessor, '(')) {
-            $method = rtrim($accessor, '()');
-            return method_exists($event, $method) ? $event->$method() : null;
+        return $this->resolveAccessor($event, $accessor);
+    }
+
+    private function resolveAccessor(object $event, string $accessor): mixed
+    {
+        $method = rtrim($accessor, '()');
+
+        if (method_exists($event, $method)) {
+            return $event->$method();
         }
 
         return $event->$accessor ?? null;

@@ -23,7 +23,9 @@ class FixedRewardProgram extends AbstractProgram
 
     public function reward(mixed $rewardObject): void
     {
-        $amount = config('referrals.fixed_reward_amount', static::FIXED_AMOUNT);
+        $amount = static::FIXED_AMOUNT !== self::FIXED_AMOUNT
+            ? static::FIXED_AMOUNT
+            : config('referrals.fixed_reward_amount', self::FIXED_AMOUNT);
 
         $this->recruitUser->balance = $this->recruitUser->balance + $amount;
         $this->recruitUser->save();
