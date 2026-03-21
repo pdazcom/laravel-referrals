@@ -161,4 +161,53 @@ class ReferralCodeCollisionTest extends TestCase
 
         $this->assertEquals(count($codes), count(array_unique($codes)), 'All generated codes should be unique');
     }
+
+    public function testGenerationSkipsCandidateMatchingLegacyCode(): void
+    {
+        $existingLink = $this->program->links()->create(['user_id' => 1]);
+        $legacyCode = $existingLink->code;
+
+        $callCount = 0;
+        $this->app->bind(ReferralCodeGeneratorInterface::class, function () use (&$callCount, $legacyCode) {
+            return new class($callCount, $legacyCode) implements ReferralCodeGeneratorInterface {
+                public function __construct(private int &$callCount, private string $legacyCode) {}
+
+                public function generate(): string
+                {
+                    $this->callCount++;
+                    if ($this->callCount === 1) {
+                        return $this->legacyCode;
+                    }
+                    return 'SAFE-CODE';
+                }
+            };
+        });
+
+        $newLink = $this->program->links()->create(['user_id' => 2]);
+
+        $this->assertEquals('SAFE-CODE', $newLink->referral_code);
+        $this->assertEquals(2, $callCount, 'Generator retried after candidate matched legacy code column');
+    }
+
+    public function testAssignReferralCodeRejectsValueMatchingLegacyCode(): void
+    {
+        $existingLink = $this->program->links()->create(['user_id' => 1]);
+        $legacyCode = $existingLink->code;
+
+        $secondLink = $this->program->links()->create(['user_id' => 2]);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("conflicts with an existing legacy code");
+
+        $secondLink->assignReferralCode($legacyCode);
+    }
+
+    public function testAssignReferralCodeAllowsValueNotMatchingAnyColumn(): void
+    {
+        $link = $this->program->links()->create(['user_id' => 1]);
+
+        $link->assignReferralCode('SAFE-ASSIGN');
+
+        $this->assertEquals('SAFE-ASSIGN', $link->fresh()->referral_code);
+    }
 }

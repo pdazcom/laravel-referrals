@@ -52,7 +52,7 @@ class ReferralLink extends Model
         for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
             $candidate = $generator->generate();
 
-            if (!static::where('referral_code', $candidate)->exists()) {
+            if (!$this->codeExistsInAnyColumn($candidate)) {
                 $this->referral_code = $candidate;
                 return;
             }
@@ -63,9 +63,21 @@ class ReferralLink extends Model
 
     public function assignReferralCode(string $referralCode): static
     {
+        if (static::where('code', $referralCode)->exists()) {
+            throw new \InvalidArgumentException(
+                "The referral code '{$referralCode}' conflicts with an existing legacy code."
+            );
+        }
+
         $this->referral_code = $referralCode;
         $this->save();
         return $this;
+    }
+
+    private static function codeExistsInAnyColumn(string $candidate): bool
+    {
+        return static::where('referral_code', $candidate)->exists()
+            || static::where('code', $candidate)->exists();
     }
 
     public static function getReferral($user, $program): ?static
