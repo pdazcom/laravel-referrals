@@ -3,7 +3,20 @@
 return [
     'programs' => [
         'example' => \Pdazcom\Referrals\Programs\ExampleProgram::class,
+        // 'fixed-bonus' => \Pdazcom\Referrals\Programs\FixedRewardProgram::class,
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Fixed Reward Amount
+    |--------------------------------------------------------------------------
+    |
+    | The flat credit amount awarded by FixedRewardProgram on each qualifying
+    | conversion. Override this value in your own subclass by redeclaring the
+    | FIXED_AMOUNT constant, or change it here to apply globally.
+    |
+    */
+    'fixed_reward_amount' => 10,
     'cookie_name' => 'ref',
     'code_generator' => \Pdazcom\Referrals\Generators\RandomStringCodeGenerator::class,
     'code_length' => 8,
