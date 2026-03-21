@@ -81,6 +81,12 @@ class ReferralLink extends Model
         return static::where('referral_code', $referralCode)->first();
     }
 
+    public static function findByAnyCode(string $code): ?static
+    {
+        return static::where('code', $code)->first()
+            ?? static::where('referral_code', $code)->first();
+    }
+
     public function link(): Attribute
     {
         return Attribute::get(fn () => url($this->program->uri) . '?ref=' . $this->code);
