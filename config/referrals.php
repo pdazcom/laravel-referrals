@@ -29,6 +29,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Self-Referral Prevention
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, a user cannot refer themselves using their own referral
+    | link. If the referring user's ID matches the referral link owner's ID,
+    | the relationship is silently skipped and a log entry is written.
+    |
+    | Set to true to enable. Disabled by default for backward compatibility.
+    |
+    */
+    'prevent_self_referral' => false,
+
+    /*
+    |--------------------------------------------------------------------------
     | Reward Hooks
     |--------------------------------------------------------------------------
     |
