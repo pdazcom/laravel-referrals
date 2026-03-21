@@ -1,0 +1,133 @@
+<?php
+
+namespace Pdazcom\Referrals\Tests\Unit\Models;
+
+use Pdazcom\Referrals\Models\ReferralLink;
+use Pdazcom\Referrals\Models\ReferralProgram;
+use Pdazcom\Referrals\Tests\TestCase;
+use Pdazcom\Referrals\Tests\WithLoadMigrations;
+
+class ReferralCodeTest extends TestCase
+{
+    use WithLoadMigrations;
+
+    private ReferralProgram $program;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->program = ReferralProgram::create([
+            'name' => 'example',
+            'title' => 'Test Program',
+            'description' => 'Test description',
+            'uri' => 'test',
+        ]);
+    }
+
+    public function testReferralCodeIsNullByDefault(): void
+    {
+        $link = $this->program->links()->create(['user_id' => 1]);
+
+        $this->assertNull($link->referral_code);
+    }
+
+    public function testUuidCodeIsGeneratedOnCreation(): void
+    {
+        $link = $this->program->links()->create(['user_id' => 1]);
+
+        $this->assertNotNull($link->code);
+        $this->assertMatchesRegularExpression(
+            '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/',
+            $link->code
+        );
+    }
+
+    public function testAssignReferralCode(): void
+    {
+        $link = $this->program->links()->create(['user_id' => 1]);
+
+        $link->assignReferralCode('FRIEND2024');
+
+        $this->assertEquals('FRIEND2024', $link->fresh()->referral_code);
+    }
+
+    public function testFindByReferralCode(): void
+    {
+        $link = $this->program->links()->create(['user_id' => 1]);
+        $link->assignReferralCode('PROMO-XK3P');
+
+        $found = ReferralLink::findByReferralCode('PROMO-XK3P');
+
+        $this->assertNotNull($found);
+        $this->assertEquals($link->id, $found->id);
+    }
+
+    public function testFindByReferralCodeReturnsNullForUnknownCode(): void
+    {
+        $found = ReferralLink::findByReferralCode('NONEXISTENT');
+
+        $this->assertNull($found);
+    }
+
+    public function testReferralCodeIsUnique(): void
+    {
+        $user1 = $this->user();
+        $user2 = $this->user();
+
+        $link1 = $this->program->links()->create(['user_id' => $user1->id]);
+        $link1->assignReferralCode('UNIQUE-CODE');
+
+        $link2 = $this->program->links()->create(['user_id' => $user2->id]);
+
+        $this->expectException(\Illuminate\Database\QueryException::class);
+        $link2->assignReferralCode('UNIQUE-CODE');
+    }
+
+    public function testReferralCodeCanBeAssignedAtCreation(): void
+    {
+        $link = $this->program->links()->create([
+            'user_id' => 1,
+            'referral_code' => 'CREATION-CODE',
+        ]);
+
+        $this->assertEquals('CREATION-CODE', $link->referral_code);
+    }
+
+    public function testReferralLinkAttributeIsNullWithoutReferralCode(): void
+    {
+        $link = $this->program->links()->create(['user_id' => 1]);
+
+        $this->assertNull($link->referral_link);
+    }
+
+    public function testReferralLinkAttributeReturnsUrlWithReferralCode(): void
+    {
+        $link = $this->program->links()->create(['user_id' => 1]);
+        $link->assignReferralCode('MYCODE');
+
+        $this->assertStringContainsString('?ref=MYCODE', $link->referral_link);
+        $this->assertStringContainsString($this->program->uri, $link->referral_link);
+    }
+
+    public function testOriginalLinkAttributeStillWorksAfterReferralCode(): void
+    {
+        $link = $this->program->links()->create(['user_id' => 1]);
+        $link->assignReferralCode('MYCODE');
+
+        $this->assertStringContainsString('?ref=' . $link->code, $link->link);
+        $this->assertStringNotContainsString('MYCODE', $link->link);
+    }
+
+    public function testExistingLinkFlowUnaffectedWhenNoReferralCode(): void
+    {
+        $link = $this->program->links()->create(['user_id' => 1]);
+
+        // The legacy link() attribute still works
+        $this->assertStringContainsString('?ref=' . $link->code, $link->link);
+
+        // No referral_code does not break anything
+        $this->assertNull($link->referral_code);
+        $this->assertNull($link->referral_link);
+    }
+}

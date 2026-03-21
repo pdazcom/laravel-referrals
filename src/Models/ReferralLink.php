@@ -14,12 +14,13 @@ use Ramsey\Uuid\Uuid;
  * @package Pdazcom\Referrals\Models
  * @property int $id
  * @property string $code
+ * @property string|null $referral_code
  * @property Collection $relationships
  * @property ReferralProgram $program
  */
 class ReferralLink extends Model
 {
-    protected $fillable = ['user_id', 'referral_program_id'];
+    protected $fillable = ['user_id', 'referral_program_id', 'referral_code'];
 
     protected static function boot(): void
     {
@@ -36,7 +37,14 @@ class ReferralLink extends Model
         $this->code = (string) Uuid::uuid1();
     }
 
-    public static function getReferral($user, $program)
+    public function assignReferralCode(string $referralCode): static
+    {
+        $this->referral_code = $referralCode;
+        $this->save();
+        return $this;
+    }
+
+    public static function getReferral($user, $program): ?static
     {
         return static::where([
             'user_id' => $user->id,
@@ -44,9 +52,24 @@ class ReferralLink extends Model
         ])->first();
     }
 
+    public static function findByReferralCode(string $referralCode): ?static
+    {
+        return static::where('referral_code', $referralCode)->first();
+    }
+
     public function link(): Attribute
     {
-        return Attribute::get( fn () => url($this->program->uri) . '?ref=' . $this->code);
+        return Attribute::get(fn () => url($this->program->uri) . '?ref=' . $this->code);
+    }
+
+    public function referralLink(): Attribute
+    {
+        return Attribute::get(function () {
+            if ($this->referral_code === null) {
+                return null;
+            }
+            return url($this->program->uri) . '?ref=' . $this->referral_code;
+        });
     }
 
     public function user(): BelongsTo
