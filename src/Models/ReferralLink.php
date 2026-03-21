@@ -25,6 +25,8 @@ class ReferralLink extends Model
 {
     protected $fillable = ['user_id', 'referral_program_id', 'referral_code'];
 
+    private bool $referralCodeManuallySet = false;
+
     protected static function boot(): void
     {
         // Required to call super method first - https://github.com/laravel/framework/issues/25455
@@ -48,6 +50,7 @@ class ReferralLink extends Model
     private function generateReferralCode(): void
     {
         if ($this->referral_code !== null) {
+            $this->referralCodeManuallySet = true;
             return;
         }
 
@@ -78,7 +81,17 @@ class ReferralLink extends Model
             try {
                 return parent::save($options);
             } catch (QueryException $e) {
-                if (!$this->isUniqueConstraintViolation($e) || $attempt >= $maxAttempts) {
+                if (!$this->isUniqueConstraintViolation($e)) {
+                    throw $e;
+                }
+
+                if ($this->referralCodeManuallySet) {
+                    throw new \InvalidArgumentException(
+                        "The referral code '{$this->referral_code}' is already in use."
+                    );
+                }
+
+                if ($attempt >= $maxAttempts) {
                     throw $e;
                 }
 
@@ -110,6 +123,7 @@ class ReferralLink extends Model
         }
 
         $this->referral_code = $referralCode;
+        $this->referralCodeManuallySet = true;
         $this->save();
         return $this;
     }
