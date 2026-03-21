@@ -5,9 +5,12 @@ namespace Pdazcom\Referrals\Listeners;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Pdazcom\Referrals\Events\ReferralCase;
+use Pdazcom\Referrals\Models\ReferralLink;
 use Pdazcom\Referrals\Models\ReferralProgram;
+use Pdazcom\Referrals\Models\ReferralRelationship;
 
 /**
  * Reward accrual
@@ -16,10 +19,8 @@ class RewardUser {
 
     public function handle(ReferralCase $event): void
     {
-        // find needle referral program
         $referralPrograms = ReferralProgram::whereIn('name', $event->programName)->get();
 
-        // if it not exists, then nothing to do
         if (empty($referralPrograms)) {
             Log::warning("Program(s) named '" . implode(", ", $event->programName) . "' not found");
             return;
@@ -28,13 +29,10 @@ class RewardUser {
         foreach ($referralPrograms as $referralProgram) {
             $referralLink = $this->getReferralLink($referralProgram, $event->user->id);
 
-            // if user is not refer for this referral program then nothing to do
             if (empty($referralLink)) {
                 continue;
             }
 
-            $recruitUser = $referralLink->user;
-            $referralUser = $event->user;
             $rewardClass = config('referrals.programs.' . $referralProgram->name);
 
             if (!class_exists($rewardClass)) {
@@ -42,15 +40,31 @@ class RewardUser {
                 continue;
             }
 
-            (new $rewardClass($referralProgram, $recruitUser, $referralUser))->reward($event->rewardObject);
+            $recruitUser = $referralLink->user;
+            $referralUser = $event->user;
+
+            DB::transaction(function () use ($referralLink, $referralProgram, $rewardClass, $recruitUser, $referralUser, $event) {
+                $relationship = $this->getRelationship($referralLink, $referralUser->id, lockForUpdate: true);
+
+                if ($this->isDuplicateReward($relationship)) {
+                    Log::info("Duplicate reward skipped for user {$referralUser->id} on program '{$referralProgram->name}'");
+                    return;
+                }
+
+                (new $rewardClass($referralProgram, $recruitUser, $referralUser))->reward($event->rewardObject);
+
+                if ($relationship !== null && config('referrals.prevent_duplicate_rewards', false)) {
+                    $relationship->markAsRewarded();
+                }
+            });
         }
     }
 
     /**
      * Find referral link where current user is refer for
      *
-     * @param $userId
      * @param ReferralProgram $program
+     * @param $userId
      * @return Builder|Model|HasMany|null
      */
     protected function getReferralLink(ReferralProgram $program, $userId): Builder|Model|HasMany|null
@@ -58,5 +72,25 @@ class RewardUser {
         return $program->links()->whereHas('relationships', function ($query) use ($userId) {
             $query->where('user_id', $userId);
         })->first();
+    }
+
+    protected function getRelationship(ReferralLink $referralLink, int $userId, bool $lockForUpdate = false): ?ReferralRelationship
+    {
+        $query = $referralLink->relationships()->where('user_id', $userId);
+
+        if ($lockForUpdate) {
+            $query = $query->lockForUpdate();
+        }
+
+        return $query->first();
+    }
+
+    private function isDuplicateReward(?ReferralRelationship $relationship): bool
+    {
+        if (!config('referrals.prevent_duplicate_rewards', false)) {
+            return false;
+        }
+
+        return $relationship !== null && $relationship->isRewarded();
     }
 }
