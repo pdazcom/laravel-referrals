@@ -11,6 +11,24 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Duplicate Reward Prevention
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, each referral relationship can only trigger a reward once.
+    | After the reward is issued, the relationship is stamped with a
+    | `rewarded_at` timestamp. Any subsequent ReferralCase event for the same
+    | referral/program combination is silently skipped.
+    |
+    | Requires the 2026_03_21_000001_add_rewarded_at_to_referral_relationships
+    | migration to be run.
+    |
+    | Set to true to enable. Disabled by default for backward compatibility.
+    |
+    */
+    'prevent_duplicate_rewards' => false,
+
+    /*
+    |--------------------------------------------------------------------------
     | Reward Hooks
     |--------------------------------------------------------------------------
     |
