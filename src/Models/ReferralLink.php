@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
+use Pdazcom\Referrals\Contracts\ReferralCodeGeneratorInterface;
 use Ramsey\Uuid\Uuid;
 
 /**
@@ -29,12 +30,23 @@ class ReferralLink extends Model
 
         static::creating(function (ReferralLink $model) {
             $model->generateCode();
+            $model->generateReferralCode();
         });
     }
 
     private function generateCode(): void
     {
         $this->code = (string) Uuid::uuid1();
+    }
+
+    private function generateReferralCode(): void
+    {
+        if ($this->referral_code !== null) {
+            return;
+        }
+
+        $generator = app(ReferralCodeGeneratorInterface::class);
+        $this->referral_code = $generator->generate();
     }
 
     public function assignReferralCode(string $referralCode): static

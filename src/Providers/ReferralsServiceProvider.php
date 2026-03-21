@@ -5,8 +5,10 @@ namespace Pdazcom\Referrals\Providers;
 use Illuminate\Foundation\Console\AboutCommand;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider;
 use Pdazcom\Referrals\Console\InstallCommand;
+use Pdazcom\Referrals\Contracts\ReferralCodeGeneratorInterface;
 use Pdazcom\Referrals\Events\ReferralCase;
 use Pdazcom\Referrals\Events\UserReferred;
+use Pdazcom\Referrals\Generators\RandomStringCodeGenerator;
 use Pdazcom\Referrals\Listeners\ReferUser;
 use Pdazcom\Referrals\Listeners\RewardUser;
 
@@ -29,6 +31,17 @@ class ReferralsServiceProvider extends EventServiceProvider
     {
         parent::register();
         $this->mergeConfigFrom(__DIR__ . '/../../config/referrals.php', 'referrals');
+
+        $this->app->bind(ReferralCodeGeneratorInterface::class, function ($app) {
+            $generatorClass = config('referrals.code_generator', RandomStringCodeGenerator::class);
+            $length = config('referrals.code_length', 8);
+
+            if ($generatorClass === RandomStringCodeGenerator::class) {
+                return new RandomStringCodeGenerator(length: $length);
+            }
+
+            return $app->make($generatorClass);
+        });
     }
 
     /**
