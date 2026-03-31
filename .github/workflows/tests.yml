@@ -2,9 +2,13 @@ name: Tests
 
 on:
   push:
-    branches: [master, main]
+    branches: [master, main, dev]
   pull_request:
-    branches: [master, main]
+    branches: [master, main, dev]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
@@ -14,24 +18,47 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Laravel 9 — PHP 8.2 only (L9 dropped before PHP 8.3 EOL crossover)
           - php: '8.2'
             laravel: '^9.52.18'
-            testbench: '^7.48'
+            testbench: '^7.0'
+          # Laravel 10 — PHP 8.2 minimum; 8.3 representative
           - php: '8.2'
             laravel: '^10'
             testbench: '^8.0'
+          - php: '8.3'
+            laravel: '^10'
+            testbench: '^8.0'
+          # Laravel 11 — PHP 8.2 minimum; 8.3 and 8.4
           - php: '8.2'
             laravel: '^11'
             testbench: '^9.0'
           - php: '8.3'
             laravel: '^11'
             testbench: '^9.0'
+          - php: '8.4'
+            laravel: '^11'
+            testbench: '^9.0'
+          # Laravel 12 — PHP 8.2 minimum; 8.3 and 8.4
+          - php: '8.2'
+            laravel: '^12'
+            testbench: '^10.0'
           - php: '8.3'
             laravel: '^12'
             testbench: '^10.0'
           - php: '8.4'
             laravel: '^12'
             testbench: '^10.0'
+          # Laravel 13 — PHP 8.2 minimum; 8.3 and 8.4
+          - php: '8.2'
+            laravel: '^13'
+            testbench: '^11.0'
+          - php: '8.3'
+            laravel: '^13'
+            testbench: '^11.0'
+          - php: '8.4'
+            laravel: '^13'
+            testbench: '^11.0'
 
     name: PHP ${{ matrix.php }} / Laravel ${{ matrix.laravel }}
 
@@ -46,6 +73,9 @@ jobs:
           extensions: dom, curl, libxml, mbstring, zip, pdo, sqlite, pdo_sqlite
           coverage: none
 
+      # Laravel 9 has transitive dependencies with known low-severity advisories.
+      # The package itself is not affected. This unblocks the audit check for that
+      # matrix entry only. Remove once Laravel 9 support is dropped.
       - name: Allow insecure audit resolution for Laravel 9 matrix
         if: matrix.laravel == '^9.52.18'
         run: composer config audit.block-insecure false
@@ -56,4 +86,4 @@ jobs:
           composer update --prefer-dist --no-interaction
 
       - name: Run tests
-        run: vendor/bin/phpunit
+        run: vendor/bin/phpunit --configuration phpunit.xml
