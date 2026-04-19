@@ -11,15 +11,17 @@ This package was created based on the [lesson](https://blog.damirmiladinov.com/l
 author is Damir Miladinov, with some minor changes, for which I express my gratitude to him.
 
 - [Installation](#installation)
+- [Documentation Map](#documentation-map)
 - [Configuration Reference](#configuration-reference)
 - [Quickstart](#quickstart)
+- [How It Works](#how-it-works)
 - [Sharing and Entry Flows](#sharing-and-entry-flows)
 - [Reward Hooks](#reward-hooks)
-- [Usage](#usage)
+- [Manual Integration Flow](#manual-integration-flow)
 - [Bonus](#bonus-content)
 
 ## Installation
-These steps are verified against a fresh Laravel 11 and Laravel 12 application.
+These steps are verified against a fresh Laravel 11, Laravel 12, and Laravel 13 application.
 
 ### 1. Install the package
 
@@ -118,6 +120,21 @@ class User extends Authenticatable
 
 Next: continue with the [quickstart](#quickstart) to create your first referral program and verify the reward flow.
 
+## Documentation Map
+
+Use the shortest guide that matches the task you are working on:
+
+| Document | Use it when you need to |
+| --- | --- |
+| [README.md](README.md) | Install the package, understand the core flow, or verify a first integration |
+| [docs/README.md](docs/README.md) | Browse the docs by topic instead of searching the repo manually |
+| [docs/sharing-and-entry-flows.md](docs/sharing-and-entry-flows.md) | Decide between share links, human-friendly codes, and manual code entry |
+| [docs/order-subscription-integration.md](docs/order-subscription-integration.md) | Reward referrers from order or subscription completion events |
+| [docs/fixed-reward-program.md](docs/fixed-reward-program.md) | Use or adapt the built-in fixed reward program |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Set up a local checkout, run tests, and open a pull request |
+| [docs/releases](docs/releases) | Review package changes by version |
+| [docs/research](docs/research) | Read exploratory notes and design directions that are not source-of-truth setup docs |
+
 ## Configuration Reference
 
 The package configuration file is `config/referrals.php`:
@@ -127,7 +144,13 @@ return [
     'programs' => [
         'example' => \Pdazcom\Referrals\Programs\ExampleProgram::class,
     ],
+    'fixed_reward_amount' => 10,
     'cookie_name' => 'ref',
+    'code_generator' => \Pdazcom\Referrals\Generators\RandomStringCodeGenerator::class,
+    'code_length' => 8,
+    'code_generation_max_attempts' => 10,
+    'prevent_duplicate_rewards' => false,
+    'prevent_self_referral' => false,
     'hooks' => [
         'signup' => false,
         'first_purchase' => [
@@ -146,7 +169,13 @@ return [
 | Key | Default | Required | Behavior |
 | --- | --- | --- | --- |
 | `programs` | `['example' => \Pdazcom\Referrals\Programs\ExampleProgram::class]` | Yes (for reward execution) | Maps `referral_programs.name` to a reward handler class. `RewardUser` resolves handler classes via `config('referrals.programs.<program_name>')`. Missing mappings are skipped with a warning log. |
+| `fixed_reward_amount` | `10` | No | Default flat reward credited by `Pdazcom\Referrals\Programs\FixedRewardProgram` when you do not override its `FIXED_AMOUNT` constant in a subclass. |
 | `cookie_name` | `'ref'` | No | Controls the query parameter read by `StoreReferralCode` and the cookie name used to persist active referral link IDs and expiry timestamps. |
+| `code_generator` | `\Pdazcom\Referrals\Generators\RandomStringCodeGenerator::class` | No | Container binding used to generate human-friendly `referral_code` values for new `ReferralLink` records. |
+| `code_length` | `8` | No | Length passed to the default random string code generator. |
+| `code_generation_max_attempts` | `10` | No | Maximum retries when generating a unique `referral_code` before throwing a `ReferralCodeGenerationException`. |
+| `prevent_duplicate_rewards` | `false` | No | When enabled, stamps `referral_relationships.rewarded_at` after the first payout and skips later payouts for the same relationship. |
+| `prevent_self_referral` | `false` | No | When enabled, `ReferUser` skips relationships where the referred user is also the owner of the referral link. |
 | `hooks.signup` | `false` | No | When `true`, automatically dispatches `UserReferred` on `Illuminate\Auth\Events\Registered`. Requires `StoreReferralCode` on the registration route. |
 | `hooks.first_purchase` | (see above) | No | When `enabled` is `true` and `event` is set, automatically dispatches `ReferralCase` when the configured event fires. See [Reward Hooks](#reward-hooks) for full options. |
 
@@ -182,6 +211,58 @@ Example (multiple programs):
 - With the default value (`ref`), links look like: `/register?ref=ABC123`.
 - If you set `cookie_name` to `referral`, links look like: `/register?referral=ABC123`.
 - Existing links must use the same query parameter name as your configured `cookie_name`.
+
+### `code_generator`, `code_length`, and `code_generation_max_attempts`
+
+Every new `ReferralLink` gets two codes:
+
+- `code`: the legacy UUID used by `$link->link`
+- `referral_code`: the human-friendly code used by `$link->referral_link`
+
+The default generator is `Pdazcom\Referrals\Generators\RandomStringCodeGenerator`, which:
+
+- generates uppercase alphanumeric codes
+- avoids visually ambiguous characters such as `0`, `O`, `I`, and `1`
+- uses `code_length` to determine the generated code size
+- retries until the code is unique across both the legacy `code` column and the new `referral_code` column
+
+If you want custom code generation rules, bind a class that implements `Pdazcom\Referrals\Contracts\ReferralCodeGeneratorInterface`:
+
+```php
+'code_generator' => \App\Referrals\NumericCodeGenerator::class,
+```
+
+Use `code_generation_max_attempts` to cap the retry loop if your code space is small or highly constrained.
+
+### `prevent_duplicate_rewards`
+
+Enable this guard when a referred user should only produce one payout for a given referral relationship:
+
+```php
+'prevent_duplicate_rewards' => true,
+```
+
+Behavior:
+
+- `RewardUser` locks the matching `referral_relationships` row inside a transaction
+- the first successful payout stamps `rewarded_at`
+- later `ReferralCase` events for the same relationship are skipped
+
+Run the package migrations before enabling this guard so the `rewarded_at` column exists.
+
+### `prevent_self_referral`
+
+Enable this guard if users must not attribute themselves with their own referral links:
+
+```php
+'prevent_self_referral' => true,
+```
+
+Behavior:
+
+- `ReferUser` compares the referred user ID with the referral link owner ID
+- when they match, the relationship is skipped and a log entry is written
+- when disabled, self-referrals behave the same as any other referral
 
 ## Quickstart
 
@@ -286,6 +367,41 @@ Checkpoint: the log contains `Quickstart reward triggered`.
 At this point the package is installed, the referral relationship is stored, and the reward handler is running. To wire this into your real registration flow, dispatch `UserReferred::dispatch($request->input(StoreReferralCode::REFERRALS), $user)` after signup as shown below.
 
 If you want to support code sharing in chat, SMS, or native mobile flows, continue with [Sharing and Entry Flows](#sharing-and-entry-flows).
+
+## How It Works
+
+The package is event-driven. This is the shortest path through the main objects:
+
+```text
+ReferralLink shared or entered
+        |
+        v
+StoreReferralCode middleware captures ?ref=... and stores active referral IDs in a cookie
+        |
+        v
+UserReferred event is dispatched after signup or via registerWithCode()
+        |
+        v
+ReferUser creates ReferralRelationship rows
+        |
+        v
+ReferralCase event is dispatched when a qualifying conversion happens
+        |
+        v
+RewardUser resolves the program class and calls reward()
+```
+
+Core models:
+
+- `ReferralProgram`: defines the program name, target URI, and attribution lifetime
+- `ReferralLink`: belongs to a user and program, stores both the legacy UUID code and human-friendly `referral_code`
+- `ReferralRelationship`: records that a user was referred by a specific referral link and whether they have already been rewarded
+
+Integration choices:
+
+- use hooks when your app already fires `Registered` and a purchase or subscription event
+- dispatch `UserReferred` and `ReferralCase` manually when you need explicit control
+- use `registerWithCode()` when referral attribution happens through a typed code instead of a clicked link
 
 ## Sharing and Entry Flows
 
@@ -434,84 +550,108 @@ With the config above, `ReferralCase::dispatch(['welcome-bonus', 'first-purchase
 
 Enabling hooks does not change any existing behavior. Existing manual dispatches of `UserReferred` and `ReferralCase` continue to work. You can keep manual dispatches alongside hooks without double-rewarding as long as you are not dispatching the same event twice for the same user action.
 
-## Usage
-### Add new referrer event
-Then in `Http/Controllers/Auth/RegisterController.php` add event dispatcher:
+## Manual Integration Flow
 
-```
-...
+Use this section when you do not want to enable hooks and prefer to dispatch package events yourself.
+
+### 1. Dispatch `UserReferred` after signup
+
+```php
+use Illuminate\Http\Request;
 use Pdazcom\Referrals\Events\UserReferred;
 use Pdazcom\Referrals\Http\Middleware\StoreReferralCode;
 
-...
-// overwrite registered function
-public function registered(Request $request, $user)
+public function registered(Request $request, $user): void
 {
-    // dispatch user referred event here
-    UserReferred::dispatch($request->input(StoreReferralCode::REFERRALS), $user);
+    UserReferred::dispatch(
+        $request->input(StoreReferralCode::REFERRALS, []),
+        $user,
+    );
 }
 ```
 
-From this point all referral links would be attached new users as referrals to users owners of these links.
-### Create referral program
-And then you need to create a referral program in database and attach it to users by `referral_program_id` field:
+This consumes the referral IDs that `StoreReferralCode` placed on the request and creates `ReferralRelationship` records through the `ReferUser` listener.
 
-```
-    php artisan tinker
-    
-    Pdazcom\Referrals\Models\ReferralProgram::create(['name'=>'example', 'title' => 'Example Program', 'description' => 'Laravel Referrals made easy thanks to laravel-referrals package based on an article by Damir Miladinov,', 'uri' => 'register']);
+If you collect a typed referral code instead of relying on the middleware cookie, call:
+
+```php
+$user->registerWithCode($request->string('referral_code')->toString());
 ```
 
-add association to config `referrals.programs`:
+### 2. Create the referral program record
+
+```bash
+php artisan tinker
 ```
-    ...
+
+```php
+Pdazcom\Referrals\Models\ReferralProgram::create([
+    'name' => 'example',
+    'title' => 'Example Program',
+    'description' => 'Example percentage-based reward program.',
+    'uri' => '/register',
+    'lifetime_minutes' => 60,
+]);
+```
+
+Then map the program name to your reward handler in `config/referrals.php`:
+
+```php
+'programs' => [
     'example' => \App\ReferralPrograms\ExampleProgram::class,
+],
 ```
-and create the reward class `App\ReferralPrograms\ExampleProgram.php` for referral program:
 
-```
+### 3. Implement the reward class
+
+```php
 <?php
 
 namespace App\ReferralPrograms;
 
 use Pdazcom\Referrals\Programs\AbstractProgram;
 
-class ExampleProgram extends AbstractProgram {
+class ExampleProgram extends AbstractProgram
+{
+    private const ROYALTY_PERCENT = 30;
 
-    const ROYALTY_PERCENT = 30;
-
-    /**
-    *   It can be anything that will allow you to calculate the reward.   
-    * 
-    *   @param $rewardObject
-    */
     public function reward(mixed $rewardObject): void
     {
-        $this->recruitUser->balance = $this->recruitUser->balance + $rewardObject * (self::ROYALTY_PERCENT/100);
+        $this->recruitUser->balance += $rewardObject * (self::ROYALTY_PERCENT / 100);
         $this->recruitUser->save();
     }
-
 }
 ```
-create referral link:
-```
-php artisan tinker
 
-Pdazcom\Referrals\Models\ReferralLink::create(['user_id' => 1, 'referral_program_id' => 1]);
+### 4. Create a referral link for the recruiting user
+
+```php
+Pdazcom\Referrals\Models\ReferralLink::create([
+    'user_id' => 1,
+    'referral_program_id' => 1,
+]);
 ```
 
-and finally dispatch reward event in any place of your code:
+The created model exposes:
 
-```
+- `$link->referral_link` for human-friendly share URLs
+- `$link->referral_code` for manual entry surfaces
+- `$link->link` for legacy UUID-based URLs
+
+### 5. Dispatch `ReferralCase` when the conversion happens
+
+```php
 use Pdazcom\Referrals\Events\ReferralCase;
-...
 
 ReferralCase::dispatch('example', $referralUser, $rewardObject);
 ```
 
-From this point all referrals action you need would be reward recruit users by code logic in your reward classes.
+`RewardUser` will:
 
-Create many programs and their reward classes. Enjoy!
+- resolve the matching `ReferralProgram`
+- find the `ReferralLink` that attributed the referred user
+- load the configured reward class from `config('referrals.programs.<name>')`
+- call `reward($rewardObject)` on that class
 
 ### Bonus Content
 
