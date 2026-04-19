@@ -6,11 +6,14 @@ Thank you for considering a contribution! This guide covers everything you need 
 
 | Requirement | Version |
 |---|---|
-| PHP | 8.2, 8.3, or 8.4 |
+| PHP for package development | 8.3 or 8.4 |
+| PHP package support target | 8.2, 8.3, or 8.4 |
 | Composer | 2.x |
 | SQLite extension | `pdo_sqlite` |
 
-No database server is required — tests run against SQLite in-memory.
+No database server is required. Tests run against SQLite in-memory through Orchestra Testbench.
+
+Why PHP 8.3+ for local development: this repository currently locks PHPUnit `12.x`, which requires PHP 8.3 or newer even though the package itself still supports PHP 8.2 in consuming Laravel applications.
 
 ## Local Setup
 
@@ -22,11 +25,19 @@ composer install
 
 ## Running Tests
 
+If your default `php` on `PATH` is already 8.3+, use:
+
 ```bash
-vendor/bin/phpunit
+composer test
 ```
 
-All 13 tests must pass before you submit a PR. The test suite uses:
+If your default CLI PHP is older, call PHPUnit with an explicit 8.3+ binary instead:
+
+```bash
+/opt/homebrew/bin/php vendor/bin/phpunit --configuration phpunit.xml
+```
+
+At the time of writing, the suite contains 79 tests / 181 assertions. The test suite uses:
 
 - **Orchestra Testbench** to bootstrap a minimal Laravel app
 - **SQLite in-memory** — no external database needed
@@ -34,11 +45,11 @@ All 13 tests must pass before you submit a PR. The test suite uses:
 
 ### PHP version matrix
 
-The project is tested against multiple Laravel versions in CI. Locally you only need one supported PHP version. If you have multiple PHP binaries (e.g. via Homebrew), call phpunit with the right one:
+The package targets Laravel `^9.52.18|^10|^11|^12|^13` and PHP `^8.2`. CI covers the framework/version matrix. Locally, you only need one supported PHP runtime for development, but because PHPUnit 12 requires PHP 8.3+, your local test command must use PHP 8.3 or 8.4.
 
 ```bash
 # Example with Homebrew default PHP
-/opt/homebrew/bin/php vendor/bin/phpunit
+/opt/homebrew/bin/php vendor/bin/phpunit --configuration phpunit.xml
 ```
 
 ### Troubleshooting: "Cannot redeclare class" errors
@@ -49,7 +60,7 @@ If you see a `Cannot redeclare class CreateReferral*` error when running tests, 
 find vendor/orchestra/testbench-core/laravel/database/migrations/ -name "*.php" -delete
 ```
 
-Then re-run `vendor/bin/phpunit` — the error will be gone.
+Then re-run your test command. For example, `/opt/homebrew/bin/php vendor/bin/phpunit --configuration phpunit.xml`.
 
 ## Development Workflow
 
@@ -65,6 +76,24 @@ Then re-run `vendor/bin/phpunit` — the error will be gone.
 3. **Make your changes.**
 4. **Run the tests** — all must pass.
 5. **Push** your branch and open a Pull Request against `master`.
+
+## Project Map
+
+Use this structure when deciding where code, tests, or docs belong:
+
+```text
+src/
+  Console/      artisan install command
+  Events/       package events that integrations dispatch or listen for
+  Http/         middleware that captures referral codes
+  Listeners/    relationship creation and reward execution
+  Models/       referral programs, links, and relationships
+  Programs/     built-in reward program implementations
+  Providers/    service provider, bindings, event wiring, AboutCommand entry
+  Traits/       user-facing helper methods such as registerWithCode()
+tests/Unit/     package behavior tests grouped by domain
+docs/           integration guides, release notes, and research notes
+```
 
 ## Adding Tests
 
